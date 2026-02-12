@@ -16,14 +16,14 @@ Implement pluggable authentication for the vintasend-dashboard using the **Strat
 │  │          AuthStrategy (interface)         │  │
 │  │  ─────────────────────────────────────    │  │
 │  │  getProvider()           → Provider JSX   │  │
-│  │  getMiddleware()         → NextMiddleware  │  │
+│  │  getMiddleware()         → NextMiddleware │  │
 │  │  getCurrentUser()        → User | null    │  │
 │  │  getSignInUrl()          → string         │  │
 │  │  getSignOutUrl()         → string         │  │
 │  │  isAuthenticated()       → boolean        │  │
 │  │  getAuthHeaderValue()    → string | null  │  │
 │  └────────┬────────────────────┬─────────────┘  │
-│           │                    │                 │
+│           │                   │                 │
 │  ┌────────▼──────┐   ┌────────▼──────┐          │
 │  │ ClerkStrategy │   │ Auth0Strategy │          │
 │  └───────────────┘   └───────────────┘          │

@@ -4,8 +4,10 @@ import {
   createContext,
   useContext,
   useState,
+  useEffect,
   type ReactNode,
 } from "react";
+import { useUser } from "@clerk/nextjs";
 import type { AuthUser } from "./types";
 
 interface AuthContextType {
@@ -33,7 +35,31 @@ export function AuthProvider({
   signOutUrl,
   initialUser,
 }: AuthProviderProps) {
-  const [user] = useState<AuthUser | null>(initialUser);
+  const [user, setUser] = useState<AuthUser | null>(initialUser);
+  
+  // Check which auth provider is being used
+  const authProvider = process.env.NEXT_PUBLIC_AUTH_PROVIDER || process.env.AUTH_PROVIDER;
+  const isClerk = authProvider === "clerk" || !authProvider;
+  
+  // Always call the hook (rules of hooks), but only use it for Clerk
+  const { user: clerkUser, isLoaded } = useUser();
+
+  // Update user state when Clerk's auth state changes
+  useEffect(() => {
+    if (isClerk && isLoaded) {
+      if (clerkUser) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setUser({
+          id: clerkUser.id,
+          email: clerkUser.primaryEmailAddress?.emailAddress || "",
+          name: clerkUser.fullName || clerkUser.firstName || "",
+          imageUrl: clerkUser.imageUrl,
+        });
+      } else {
+        setUser(null);
+      }
+    }
+  }, [clerkUser, isLoaded, isClerk]);
 
   const value: AuthContextType = {
     user,

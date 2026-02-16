@@ -6,23 +6,49 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@auth0/nextjs-auth0": "^4.15.0",
     "@clerk/nextjs": "^6.37.3",
+    "@tanstack/react-table": "^8.21.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.564.0",
     "next": "16.1.6",
+    "radix-ui": "^1.4.3",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-day-picker": "^9.13.2",
+    "react-dom": "19.2.3",
+    "tailwind-merge": "^3.4.0",
+    "vintasend": "^0.5.1",
+    "vintasend-medplum": "^0.5.1",
+    "vintasend-sendgrid": "^0.5.1"
   },
   "devDependencies": {
+    "@medplum/core": "5.0.10",
+    "@medplum/eslint-config": "5.0.10",
+    "@medplum/fhirtypes": "5.0.10",
+    "@medplum/mock": "^5.0.12",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^30.2.0",
+    "shadcn": "^3.8.4",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.6",
+    "tw-animate-css": "^1.4.0",
     "typescript": "^5"
   }
 }

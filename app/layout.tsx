@@ -4,6 +4,8 @@ import "./globals.css";
 import { resolveAuthStrategy } from "@/lib/auth";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { assertValidAuthConfig } from "@/lib/auth/validate-config";
+import { TopNavbar } from "./components/top-navbar";
+import type { AuthUser } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -19,6 +21,33 @@ export const metadata: Metadata = {
   title: "Vintasend Dashboard",
   description: "Authentication-enabled dashboard for Vintasend",
 };
+
+async function RootLayoutContent({
+  children,
+  ProviderComponent,
+  currentUser,
+  signInUrl,
+  signOutUrl,
+}: {
+  children: React.ReactNode;
+  ProviderComponent: React.ComponentType<{ children: React.ReactNode }>;
+  currentUser: AuthUser | null;
+  signInUrl: string;
+  signOutUrl: string;
+}) {
+  return (
+    <ProviderComponent>
+      <AuthProvider
+        initialUser={currentUser}
+        signInUrl={signInUrl}
+        signOutUrl={signOutUrl}
+      >
+        <TopNavbar />
+        {children}
+      </AuthProvider>
+    </ProviderComponent>
+  );
+}
 
 export default async function RootLayout({
   children,
@@ -37,15 +66,14 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ProviderComponent>
-          <AuthProvider
-            initialUser={currentUser}
-            signInUrl={signInUrl}
-            signOutUrl={signOutUrl}
-          >
-            {children}
-          </AuthProvider>
-        </ProviderComponent>
+        <RootLayoutContent
+          ProviderComponent={ProviderComponent}
+          currentUser={currentUser}
+          signInUrl={signInUrl}
+          signOutUrl={signOutUrl}
+        >
+          {children}
+        </RootLayoutContent>
       </body>
     </html>
   );

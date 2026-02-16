@@ -24,9 +24,9 @@
     "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.4.0",
-    "vintasend": "^0.5.1",
-    "vintasend-medplum": "^0.5.1",
-    "vintasend-sendgrid": "^0.5.1"
+    "vintasend": "^0.5.2",
+    "vintasend-medplum": "^0.5.2",
+    "vintasend-sendgrid": "^0.5.2"
   },
   "devDependencies": {
     "@medplum/core": "5.0.10",

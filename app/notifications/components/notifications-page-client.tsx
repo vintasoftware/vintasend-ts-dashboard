@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import type { AnyDashboardNotification, NotificationFilters, PaginatedResult } from '@/lib/notifications/types';
 import { NotificationsFilters } from './notifications-filters';
 import { NotificationsTable } from './notifications-table';
+import { NotificationDetail } from './notification-detail';
 import { fetchNotifications } from '../actions';
 
 interface NotificationsPageClientProps {
@@ -27,7 +28,6 @@ interface NotificationsPageClientProps {
 export function NotificationsPageClient({
   initialData,
   initialFilters,
-  initialPage,
 }: NotificationsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -35,6 +35,23 @@ export function NotificationsPageClient({
   // State management
   const [data, setData] = useState(initialData);
   const [isPending, startTransition] = useTransition();
+  
+  // Detail panel state
+  const [selectedNotificationId, setSelectedNotificationId] = useState<string | null>(null);
+
+  /**
+   * Handle opening the notification detail panel.
+   */
+  const handleRowClick = useCallback((id: string) => {
+    setSelectedNotificationId(id);
+  }, []);
+
+  /**
+   * Handle closing the notification detail panel.
+   */
+  const handleDetailClose = useCallback(() => {
+    setSelectedNotificationId(null);
+  }, []);
 
   /**
    * Handle filter changes from the filter component.
@@ -139,6 +156,13 @@ export function NotificationsPageClient({
         pageSize={data.pageSize}
         isLoading={isPending}
         onPaginationChange={handlePaginationChange}
+        onRowClick={handleRowClick}
+      />
+
+      {/* Notification Detail Panel */}
+      <NotificationDetail
+        notificationId={selectedNotificationId}
+        onClose={handleDetailClose}
       />
     </div>
   );

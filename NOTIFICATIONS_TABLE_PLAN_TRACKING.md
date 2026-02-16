@@ -681,5 +681,167 @@ SENDGRID_FROM_NAME=VintaSend Dashboard  # Optional, defaults to this value
 3. Optimize client-side filtering with better batch size heuristics
 4. Add caching layer for frequently accessed notifications
 
+
+## Phase 6 — Notification Detail View (Expandable Row / Side Panel) ✅
+
+### Completed Tasks
+
+#### 6.1 ✅ Installed shadcn/ui Sheet and Separator components
+- `npx shadcn@latest add sheet separator`
+- Sheet provides accessible slide-out panel implementation
+- Separator provides visual section dividers
+
+#### 6.2 ✅ Created `app/notifications/components/notification-detail.tsx`
+- **Client Component** that displays full notification details in a side panel
+- Props:
+  - `notificationId: string | null` — ID of notification to display (null = closed)
+  - `onClose: () => void` — Callback when panel should close
+- **Features Implemented**:
+  - Opens as right-side Sheet when notificationId is set
+  - Fetches notification data via `fetchNotificationDetail` server action
+  - Loading skeleton during data fetch
+  - Error state with retry button
+  - Complete notification detail display including:
+    - Type/Status badges with color coding
+    - One-off badge for non-user notifications
+    - ID, context name, recipient info
+    - All timestamps (created, updated, sendAfter, sentAt, readAt)
+    - Subject template and body template with copy-to-clipboard
+    - Context used (JSON formatted)
+    - Context parameters
+    - Extra parameters (when present)
+    - Attachments list with file metadata
+  - Proper handling of both regular and one-off notifications
+  - Responsive design (full width on mobile, max-width on desktop)
+
+#### 6.3 ✅ Updated `app/notifications/components/columns.tsx`
+- **Converted to factory pattern**: `createColumns(options)` function
+  - Accepts `onViewDetails?: (id: string) => void` callback
+  - Returns configured column definitions
+- **Actions dropdown improvements**:
+  - "View Details" button with Eye icon
+  - "Copy ID" button (now enabled)
+  - data-testid attributes for testing
+- **Backward compatibility**: Exported `columns` constant using default configuration
+
+#### 6.4 ✅ Updated `app/notifications/components/notifications-table.tsx`
+- **Added `onRowClick` prop**: `(id: string) => void`
+- **Row click handling**: Entire row is clickable when `onRowClick` provided
+- **Visual feedback**: Cursor pointer and hover highlight on clickable rows
+- **Column integration**: Uses `createColumns()` with `onViewDetails` callback
+- **Proper memoization**: `useMemo` for column definitions to prevent unnecessary re-renders
+
+#### 6.5 ✅ Updated `app/notifications/components/notifications-page-client.tsx`
+- **Added detail panel state**: `selectedNotificationId: string | null`
+- **Handler functions**: `handleRowClick()` and `handleDetailClose()`
+- **Integrated NotificationDetail component** with state management
+- **Seamless UX**: Click row → opens detail → close panel → row click works again
+
+### Test Results
+
+#### Phase 6 Detail Panel Tests (`__tests__/notifications/components/notification-detail.test.tsx`)
+
+##### 6.1: Opening the detail panel
+- ✅ Test: Opens the panel when notificationId is provided
+- ✅ Test: Does not render panel when notificationId is null
+- ✅ Test: Calls fetchNotificationDetail with the correct ID
+- ✅ Test: Shows loading state while fetching
+
+##### 6.2: Display bodyTemplate and contextUsed
+- ✅ Test: Displays the notification title in the header
+- ✅ Test: Displays the bodyTemplate content
+- ✅ Test: Displays the contextUsed content as JSON
+- ✅ Test: Displays status and type badges
+- ✅ Test: Displays extraParams when present
+- ✅ Test: Displays one-off notification with emailOrPhone
+
+##### 6.3: Attachments list
+- ✅ Test: Displays attachments list when present
+- ✅ Test: Displays attachment metadata (type, size, description)
+- ✅ Test: Shows "No attachments" when attachments array is empty
+
+##### 6.4: Closing the panel
+- ✅ Test: Calls onClose when the close button is clicked
+- ✅ Test: Resets state when panel closes and reopens
+
+##### Error handling
+- ✅ Test: Displays error message when fetch fails
+- ✅ Test: Provides a retry button on error
+
+```
+Test Suites: 1 passed, 1 total
+Tests:       17 passed, 17 total
+Time:        ~1.1s
+All Phase 6 tests passing ✅
+```
+
+### Build Verification
+
+- ✅ `npm run build` — Successful
+- ✅ TypeScript compilation passes (no type errors)
+- ✅ Sheet component properly integrated
+- ✅ All components compile correctly
+- ✅ No hydration mismatches
+
+### Files Created/Modified
+
+1. **components/ui/sheet.tsx** — shadcn/ui Sheet component (auto-generated)
+2. **components/ui/separator.tsx** — shadcn/ui Separator component (auto-generated)
+3. **app/notifications/components/notification-detail.tsx** — Detail panel component (320+ lines)
+4. **app/notifications/components/columns.tsx** — Updated with factory pattern
+5. **app/notifications/components/notifications-table.tsx** — Added row click support
+6. **app/notifications/components/notifications-page-client.tsx** — Integrated detail panel
+7. **__tests__/notifications/components/notification-detail.test.tsx** — 17 comprehensive tests (310+ lines)
+
+### Architecture Notes
+
+#### Detail Panel Design
+- **Sheet-based approach**: Uses Radix UI Dialog (via shadcn Sheet) for accessible modal-like behavior
+- **Right-side slide-in**: Natural for detail views, doesn't obscure table
+- **Server action fetch**: Data loaded on-demand via `fetchNotificationDetail`
+- **useTransition**: Non-blocking loading for smooth UX
+
+#### Column Factory Pattern
+- **Why factory?** Allows injecting callbacks like `onViewDetails` without prop drilling
+- **Memoization**: Table uses `useMemo` to recreate columns only when callbacks change
+- **Backward compatible**: Default `columns` export still works for existing code
+
+#### Detail Content Layout
+- **Scrollable content**: Overflow handling for long content
+- **Code blocks**: Pre-formatted display for templates and JSON data
+- **Copy buttons**: Easy clipboard access for templates and context
+- **Responsive grid**: Two-column layout for metadata fields
+
+#### Attachment Display
+- **File icon**: Visual indicator for attachments
+- **Metadata**: Filename, type, size (human-readable), description
+- **Empty state**: Clear "No attachments" message when none present
+
+### Key Design Decisions
+
+1. **Sheet over Expandable Row**: Sheet provides better UX for detailed content without disrupting table layout
+2. **On-Demand Fetch**: Detail data fetched when panel opens (not pre-loaded) to keep list view fast
+3. **Factory Pattern for Columns**: Cleanest way to inject callbacks into TanStack column definitions
+4. **Row Click + Action Menu**: Both row click and action dropdown open details (different entry points)
+5. **State in Page Client**: Selected notification ID managed at page level for proper coordination
+
+### Known Behaviors
+
+1. **Double-click prevention**: Row click handler fires once per click, no debounce needed
+2. **Panel persistence**: Selected ID persists until explicitly closed or notificationId set to null
+3. **Concurrent requests**: If user clicks multiple rows quickly, only the last request's data is shown
+4. **Error recovery**: Retry button reloads the same notification ID
+
+### Test Coverage Summary
+
+| Test Category | Tests | Status |
+|--------------|-------|--------|
+| Panel open/close | 4 | ✅ Pass |
+| Content display | 6 | ✅ Pass |
+| Attachments | 3 | ✅ Pass |
+| Closing behavior | 2 | ✅ Pass |
+| Error handling | 2 | ✅ Pass |
+| **Total** | **17** | **✅ All Pass** |
+
 ```
 

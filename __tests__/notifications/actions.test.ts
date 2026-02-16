@@ -3,6 +3,19 @@
  * Ensures the server actions return correctly shaped data and handle filters.
  */
 
+// Mock the get-vintasend-service module to avoid ES module import issues with dependencies
+jest.mock('@/lib/notifications/get-vintasend-service', () => ({
+  getVintaSendService: jest.fn().mockResolvedValue({
+    getNotifications: jest.fn().mockResolvedValue([]),
+    getPendingNotifications: jest.fn().mockResolvedValue([]),
+    getFutureNotifications: jest.fn().mockResolvedValue([]),
+    getOneOffNotifications: jest.fn().mockResolvedValue([]),
+    getNotification: jest.fn().mockResolvedValue(null),
+    getOneOffNotification: jest.fn().mockResolvedValue(null),
+  }),
+  validateBackendConfig: jest.fn().mockResolvedValue([]),
+}));
+
 import {
   fetchNotifications,
   fetchNotificationDetail,
@@ -12,11 +25,63 @@ import {
 } from '@/app/notifications/actions';
 import type {
   AnyDashboardNotification,
-  NotificationFilters,
-  PaginatedResult,
 } from '@/lib/notifications/types';
 
+// Import the mocked functions
+const { getVintaSendService } = jest.requireMock('@/lib/notifications/get-vintasend-service');
+
+// Create mock notification data for testing
+const createMockNotification = (overrides = {}) => ({
+  id: 'notif-1',
+  userId: 'user-1',
+  notificationType: 'EMAIL' as const,
+  title: 'Test Notification',
+  contextName: 'testContext',
+  status: 'SENT' as const,
+  sendAfter: null,
+  sentAt: new Date('2024-01-15T10:00:00Z'),
+  readAt: null,
+  createdAt: new Date('2024-01-15T09:00:00Z'),
+  adapterUsed: 'sendgrid',
+  bodyTemplate: 'Test body',
+  subjectTemplate: 'Test subject',
+  contextUsed: { key: 'value' },
+  contextParameters: { param: 'test' },
+  extraParams: null,
+  attachments: [],
+  ...overrides,
+});
+
 describe('Notification Server Actions — Phase 2', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Setup default mock responses
+    const mockService = {
+      getNotifications: jest.fn().mockResolvedValue([
+        createMockNotification({ id: 'notif-1', status: 'SENT' }),
+        createMockNotification({ id: 'notif-2', status: 'PENDING_SEND', notificationType: 'SMS' }),
+        createMockNotification({ id: 'notif-3', status: 'SENT', notificationType: 'EMAIL' }),
+      ]),
+      getPendingNotifications: jest.fn().mockResolvedValue([
+        createMockNotification({ id: 'notif-2', status: 'PENDING_SEND' }),
+      ]),
+      getFutureNotifications: jest.fn().mockResolvedValue([
+        createMockNotification({ id: 'notif-4', sendAfter: new Date('2030-01-01T00:00:00Z') }),
+      ]),
+      getOneOffNotifications: jest.fn().mockResolvedValue([
+        {
+          ...createMockNotification({ id: 'oneoff-1' }),
+          emailOrPhone: 'test@example.com',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+      ]),
+      getNotification: jest.fn().mockResolvedValue(createMockNotification()),
+      getOneOffNotification: jest.fn().mockResolvedValue(null),
+    };
+    (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+  });
+
   describe('fetchNotifications', () => {
     it('2.3: fetchNotifications returns PaginatedResult shape (mock)', async () => {
       const result = await fetchNotifications({}, 1, 10);

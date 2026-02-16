@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
+import { ArrowUpDown, ChevronDown, Eye } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,8 +14,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { ArrowUpDown, ChevronDown } from 'lucide-react';
-import type { AnyDashboardNotification, DashboardNotification, DashboardOneOffNotification } from '@/lib/notifications/types';
+import type {
+  AnyDashboardNotification,
+  DashboardNotification,
+  DashboardOneOffNotification,
+} from '@/lib/notifications/types';
 import type { NotificationStatus } from 'vintasend/dist/types/notification-status';
 import type { NotificationType } from 'vintasend/dist/types/notification-type';
 /**
@@ -71,9 +75,23 @@ function getRecipient(notification: AnyDashboardNotification): string {
 }
 
 /**
- * TanStack column definitions for the notifications table.
+ * Options for generating column definitions.
  */
-export const columns: ColumnDef<AnyDashboardNotification>[] = [
+export interface ColumnOptions {
+  /**
+   * Callback fired when "View Details" is clicked.
+   */
+  onViewDetails?: (id: string) => void;
+}
+
+/**
+ * Creates TanStack column definitions for the notifications table.
+ * Accepts options for action callbacks.
+ */
+export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboardNotification>[] {
+  const { onViewDetails } = options;
+
+  const columns: ColumnDef<AnyDashboardNotification>[] = [
   {
     accessorKey: 'id',
     header: 'ID',
@@ -159,27 +177,45 @@ export const columns: ColumnDef<AnyDashboardNotification>[] = [
     size: 120,
   },
 
-  {
-    id: 'actions',
-    header: 'Actions',
-    cell: ({ row }) => (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="h-8 w-8 p-0">
-            <span className="sr-only">Open menu</span>
-            <ChevronDown className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => console.log('View details:', row.original.id)}>
-            View Details
-          </DropdownMenuItem>
-          <DropdownMenuItem disabled>Copy ID</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ),
-    size: 80,
-  },
-];
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: ({ row }) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-8 w-8 p-0">
+              <span className="sr-only">Open menu</span>
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onViewDetails?.(row.original.id)}
+              disabled={!onViewDetails}
+              data-testid={`view-details-${row.original.id}`}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => navigator.clipboard.writeText(row.original.id)}
+            >
+              Copy ID
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      size: 80,
+    },
+  ];
+
+  return columns;
+}
+
+/**
+ * Default columns without action callbacks (for backward compatibility).
+ * @deprecated Use createColumns() with options instead.
+ */
+export const columns = createColumns();

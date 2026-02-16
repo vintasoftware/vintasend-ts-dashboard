@@ -1,23 +1,28 @@
 'use client';
+'use no memo';
 
-import type {
-    Cell,
-    Row,
-    SortingState,
-} from '@tanstack/react-table';
+import type { Cell, Row, SortingState } from '@tanstack/react-table';
 import {
-    flexRender,
-    getCoreRowModel,
-    getSortedRowModel,
-    useReactTable,
+  flexRender,
+  getCoreRowModel,
+  getSortedRowModel,
+  useReactTable,
 } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import type { AnyDashboardNotification } from '@/lib/notifications/types';
-import { useState } from 'react';
-import { columns } from './columns';
+import { createColumns, columns as defaultColumns } from './columns';
 
 
 type SkeletonRow = {
@@ -39,6 +44,11 @@ interface NotificationsTableProps {
   pageSize: number;
   isLoading?: boolean;
   onPaginationChange?: (page: number) => void;
+  /**
+   * Callback fired when a row is clicked.
+   * @param id - Notification ID
+   */
+  onRowClick?: (id: string) => void;
 }
 
 /**
@@ -51,6 +61,7 @@ interface NotificationsTableProps {
  * @param pageSize - Items per page
  * @param isLoading - Whether data is loading
  * @param onPaginationChange - Callback when page changes
+ * @param onRowClick - Callback when a row is clicked
  */
 export function NotificationsTable({
   data,
@@ -59,9 +70,14 @@ export function NotificationsTable({
   pageSize,
   isLoading = false,
   onPaginationChange,
+  onRowClick,
 }: NotificationsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
+  // Create columns with action callbacks
+  const columns = onRowClick ? createColumns({ onViewDetails: onRowClick }) : defaultColumns;
+
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns,
@@ -117,7 +133,16 @@ export function NotificationsTable({
               </TableRow>
             ) : (
               displayRows.map((row) => (
-                <TableRow key={row.id} data-testid={`notification-row-${row.id}`}>
+                <TableRow
+                  key={row.id}
+                  data-testid={`notification-row-${row.id}`}
+                  className={onRowClick && !row.isSkeleton ? 'cursor-pointer hover:bg-muted/50' : ''}
+                  onClick={() => {
+                    if (onRowClick && !row.isSkeleton) {
+                      onRowClick(row.original.id);
+                    }
+                  }}
+                >
                   {row.isSkeleton ? (
                     // Skeleton row
                     Array.from({ length: columns.length }).map((_, i) => (

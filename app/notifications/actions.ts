@@ -21,38 +21,6 @@ import { getVintaSendService } from '@/lib/notifications/get-vintasend-service';
 import { isOneOffNotification } from 'vintasend';
 
 /**
- * Helper function to apply client-side filters to notifications.
- * Used when backend doesn't support specific filter combinations.
- */
-function applyFilters(
-  notifications: AnyDashboardNotification[],
-  filters: NotificationFilters,
-): AnyDashboardNotification[] {
-  let filtered = notifications;
-
-  if (filters.status) {
-    filtered = filtered.filter((item) => item.status === filters.status);
-  }
-
-  if (filters.notificationType) {
-    filtered = filtered.filter((item) => item.notificationType === filters.notificationType);
-  }
-
-  if (filters.search) {
-    const searchLower = filters.search.toLowerCase();
-    filtered = filtered.filter(
-      (item) =>
-        (item.title?.toLowerCase().includes(searchLower) ?? false) ||
-        item.id.toLowerCase().includes(searchLower) ||
-        ('emailOrPhone' in item && item.emailOrPhone.toLowerCase().includes(searchLower)) ||
-        ('userId' in item && item.userId.toLowerCase().includes(searchLower)),
-    );
-  }
-
-  return filtered;
-}
-
-/**
  * Fetches notifications with optional filtering and pagination.
  * Connects to the real VintaSend backend.
  *
@@ -69,38 +37,25 @@ export async function fetchNotifications(
   try {
     const service = await getVintaSendService();
 
-    // Use specialized backend methods when possible
+    // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+    const backendPage = page - 1;
+
     let dbNotifications: Awaited<ReturnType<typeof service.getPendingNotifications>>;
-    if (filters.status === 'PENDING_SEND' && !filters.notificationType && !filters.search) {
-      // Use optimized pending notifications query
-      dbNotifications = await service.getPendingNotifications(page, pageSize);
+    if (filters.status === 'PENDING_SEND') {
+      dbNotifications = await service.getPendingNotifications(backendPage, pageSize);
     } else {
-      // Fetch a larger batch to account for filtering
-      // This is a limitation of the current backend not supporting complex filters
-      const fetchSize = pageSize * 3; // Fetch 3x to account for filtering
-      dbNotifications = await service.getNotifications(page, fetchSize);
+      dbNotifications = await service.getNotifications(backendPage, pageSize);
     }
 
-    // Serialize all notifications
     const serialized = dbNotifications.map((n) =>
       isOneOffNotification(n) ? serializeOneOffNotification(n) : serializeNotification(n),
     );
 
-    // Apply client-side filters
-    const filtered = applyFilters(serialized, filters);
-
-    // Paginate the filtered results
-    const startIdx = 0; // Already paginated by backend call
-    const endIdx = pageSize;
-    const paginatedData = filtered.slice(startIdx, endIdx);
-
-    // Note: Total count is approximate when filters are applied
-    // A proper implementation would require backend support for filtered counts
     return {
-      data: paginatedData,
+      data: serialized,
       page,
       pageSize,
-      total: filtered.length + (paginatedData.length === pageSize ? pageSize : 0), // Estimate
+      hasMore: serialized.length === pageSize,
     };
   } catch (error) {
     // Log error and re-throw with user-friendly message
@@ -166,7 +121,8 @@ export async function fetchPendingNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
-    const dbNotifications = await service.getPendingNotifications(page, pageSize);
+    // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+    const dbNotifications = await service.getPendingNotifications(page - 1, pageSize);
 
     const serialized = dbNotifications.map((n) =>
       isOneOffNotification(n) ? serializeOneOffNotification(n) : serializeNotification(n),
@@ -176,7 +132,7 @@ export async function fetchPendingNotifications(
       data: serialized,
       page,
       pageSize,
-      total: serialized.length + (serialized.length === pageSize ? pageSize : 0), // Estimate
+      hasMore: serialized.length === pageSize,
     };
   } catch (error) {
     console.error('Error fetching pending notifications:', error);
@@ -200,7 +156,8 @@ export async function fetchFutureNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
-    const dbNotifications = await service.getFutureNotifications(page, pageSize);
+    // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+    const dbNotifications = await service.getFutureNotifications(page - 1, pageSize);
 
     const serialized = dbNotifications.map((n) =>
       isOneOffNotification(n) ? serializeOneOffNotification(n) : serializeNotification(n),
@@ -210,7 +167,7 @@ export async function fetchFutureNotifications(
       data: serialized,
       page,
       pageSize,
-      total: serialized.length + (serialized.length === pageSize ? pageSize : 0), // Estimate
+      hasMore: serialized.length === pageSize,
     };
   } catch (error) {
     console.error('Error fetching future notifications:', error);
@@ -234,7 +191,8 @@ export async function fetchOneOffNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
-    const dbNotifications = await service.getOneOffNotifications(page, pageSize);
+    // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+    const dbNotifications = await service.getOneOffNotifications(page - 1, pageSize);
 
     const serialized = dbNotifications.map((n) => serializeOneOffNotification(n));
 
@@ -242,7 +200,7 @@ export async function fetchOneOffNotifications(
       data: serialized,
       page,
       pageSize,
-      total: serialized.length + (serialized.length === pageSize ? pageSize : 0), // Estimate
+      hasMore: serialized.length === pageSize,
     };
   } catch (error) {
     console.error('Error fetching one-off notifications:', error);

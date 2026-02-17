@@ -54,13 +54,13 @@ function createMockNotification(id: string, overrides = {}): AnyDashboardNotific
  */
 function createMockPaginatedResult(
   items: AnyDashboardNotification[],
-  total: number = items.length,
+  hasMore: boolean = false,
 ): PaginatedResult<AnyDashboardNotification> {
   return {
     data: items,
     page: 1,
     pageSize: 20,
-    total,
+    hasMore,
   };
 }
 
@@ -103,10 +103,10 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
       expect(screen.getByText('Notifications')).toBeInTheDocument();
     });
 
-    it('should display correct total notification count', () => {
+    it('should display notification count info', () => {
       const initialData = createMockPaginatedResult(
         Array.from({ length: 20 }, (_, i) => createMockNotification(String(i + 1))),
-        100, // total 100 items
+        true,
       );
 
       render(
@@ -117,8 +117,8 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
         />,
       );
 
-      // Should display the total count
-      expect(screen.getByText(/Total:/)).toBeInTheDocument();
+      // Should display the header
+      expect(screen.getByText(/Manage and view all notifications/)).toBeInTheDocument();
     });
 
     it('should render filter controls with initial filter values', () => {
@@ -255,10 +255,10 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
   });
 
   describe('Test 4.5 — Pagination', () => {
-    it('should accept pageCount and currentPage props', () => {
+    it('should accept hasMore and currentPage props', () => {
       const initialData = createMockPaginatedResult(
         Array.from({ length: 20 }, (_, i) => createMockNotification(String(i + 1))),
-        100,
+        true,
       );
 
       render(
@@ -276,7 +276,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     it('should have pagination controls when data exists', () => {
       const initialData = createMockPaginatedResult(
         Array.from({ length: 20 }, (_, i) => createMockNotification(String(i + 1))),
-        100,
+        true,
       );
 
       render(
@@ -299,7 +299,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
         Array.from({ length: 20 }, (_, i) =>
           createMockNotification(String(i + 1), { status: 'SENT' }),
         ),
-        50,
+        true,
       );
       const mockFetchNotifications = actions.fetchNotifications as jest.Mock;
       mockFetchNotifications.mockResolvedValue(initialData);

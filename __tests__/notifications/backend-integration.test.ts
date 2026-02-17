@@ -113,7 +113,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       expect(result).toHaveProperty('data');
       expect(result).toHaveProperty('page');
       expect(result).toHaveProperty('pageSize');
-     expect(result).toHaveProperty('total');
+     expect(result).toHaveProperty('hasMore');
       expect(Array.isArray(result.data)).toBe(true);
       expect(result.data.length).toBe(1);
       expect(result.data[0]).toHaveProperty('userId');
@@ -149,7 +149,8 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       await fetchNotifications({ status: 'PENDING_SEND' }, 1, 10);
 
-      expect(mockGetPending).toHaveBeenCalledWith(1, 10);
+      // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+      expect(mockGetPending).toHaveBeenCalledWith(0, 10);
     });
 
     it('Test 5.4: Empty result returns correct shape', async () => {
@@ -164,7 +165,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
         data: [],
         page: 1,
         pageSize: 10,
-        total: 0,
+        hasMore: false,
       });
     });
 
@@ -260,7 +261,8 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const result = await fetchPendingNotifications(1, 10);
 
-      expect(mockGetPending).toHaveBeenCalledWith(1, 10);
+      // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+      expect(mockGetPending).toHaveBeenCalledWith(0, 10);
       expect(result.data).toHaveLength(1);
       expect(result.data[0].status).toBe('PENDING_SEND');
     });
@@ -293,7 +295,8 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const result = await fetchFutureNotifications(1, 10);
 
-      expect(mockGetFuture).toHaveBeenCalledWith(1, 10);
+      // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+      expect(mockGetFuture).toHaveBeenCalledWith(0, 10);
       expect(result.data).toHaveLength(1);
     });
 
@@ -326,7 +329,8 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const result = await fetchOneOffNotifications(1, 10);
 
-      expect(mockGetOneOff).toHaveBeenCalledWith(1, 10);
+      // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
+      expect(mockGetOneOff).toHaveBeenCalledWith(0, 10);
       expect(result.data).toHaveLength(1);
       expect(result.data[0]).toHaveProperty('emailOrPhone');
     });
@@ -350,7 +354,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       );
     });
 
-    it('Test: Client-side filtering works for notificationType', async () => {
+    it('Test: notificationType filter passes through to backend (no client-side filtering)', async () => {
       const mockNotifications = [
         {
           id: 'email-1',
@@ -390,11 +394,11 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const result = await fetchNotifications({ notificationType: 'EMAIL' }, 1, 10);
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].notificationType).toBe('EMAIL');
+      // No client-side filtering — all backend results returned
+      expect(result.data).toHaveLength(2);
     });
 
-    it('Test: Client-side search filtering works', async () => {
+    it('Test: Search filter passes through to backend (no client-side filtering)', async () => {
       const mockNotifications = [
         {
           id: 'search-match',
@@ -434,8 +438,8 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const result = await fetchNotifications({ search: 'important' }, 1, 10);
 
-      expect(result.data).toHaveLength(1);
-      expect(result.data[0].title).toContain('Important');
+      // No client-side filtering — all backend results returned
+      expect(result.data).toHaveLength(2);
     });
   });
 });

@@ -4,11 +4,9 @@
  */
 
 import '@testing-library/jest-dom';
-import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationsFilters } from '@/app/notifications/components/notifications-filters';
-import type { NotificationFilters } from '@/lib/notifications/types';
 
 describe('NotificationsFilters — Phase 3', () => {
   describe('3.4: Filter Changes', () => {

@@ -128,16 +128,13 @@ export function NotificationsPageClient({
     [searchParams, initialFilters, data.pageSize, router],
   );
 
-  // Calculate page count
-  const pageCount = Math.ceil(data.total / data.pageSize);
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
         <p className="text-muted-foreground mt-2">
-          Manage and view all notifications. Total: <span className="font-semibold">{data.total}</span>
+          Manage and view all notifications.
         </p>
       </div>
 
@@ -151,7 +148,7 @@ export function NotificationsPageClient({
       {/* Table */}
       <NotificationsTable
         data={data.data}
-        pageCount={pageCount}
+        hasMore={data.hasMore}
         currentPage={data.page}
         pageSize={data.pageSize}
         isLoading={isPending}

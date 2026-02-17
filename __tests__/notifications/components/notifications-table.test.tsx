@@ -4,7 +4,6 @@
  */
 
 import '@testing-library/jest-dom';
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationsTable } from '@/app/notifications/components/notifications-table';
@@ -19,7 +18,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     userId: 'user-123',
     notificationType: 'EMAIL',
     title: 'Welcome Email',
-    contextName: 'defaultContext',
+    contextName: 'taskAssignment',
     status: 'SENT',
     sendAfter: '2024-01-01T10:00:00Z',
     sentAt: '2024-01-02T10:00:00Z',
@@ -36,7 +35,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     lastName: 'Doe',
     notificationType: 'SMS',
     title: 'Verification Code',
-    contextName: 'defaultContext',
+    contextName: 'taskAssignment',
     status: 'PENDING_SEND',
     sendAfter: '2024-01-03T10:00:00Z',
     sentAt: null,
@@ -51,7 +50,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     userId: 'user-456',
     notificationType: 'PUSH',
     title: null,
-    contextName: 'defaultContext',
+    contextName: 'taskAssignment',
     status: 'FAILED',
     sendAfter: null,
     sentAt: null,
@@ -69,7 +68,7 @@ describe('NotificationsTable — Phase 3', () => {
       const { container } = render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -84,7 +83,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -99,7 +98,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -113,7 +112,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -128,7 +127,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={[]}
-          pageCount={0}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -143,7 +142,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -158,7 +157,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -171,11 +170,11 @@ describe('NotificationsTable — Phase 3', () => {
   });
 
   describe('3.3: Pagination', () => {
-    it('renders pagination controls when pageCount > 1', () => {
+    it('renders pagination controls when hasMore is true', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={5}
+          hasMore={true}
           currentPage={1}
           pageSize={10}
           onPaginationChange={jest.fn()}
@@ -183,14 +182,14 @@ describe('NotificationsTable — Phase 3', () => {
       );
 
       // Look for page indicator
-      expect(screen.getByText(/Page 1 of 5/)).toBeInTheDocument();
+      expect(screen.getByText(/Page 1/)).toBeInTheDocument();
     });
 
-    it('does not render pagination when pageCount is 1', () => {
+    it('does not render pagination when on first page with no more data', () => {
       const { container } = render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
         />
@@ -208,14 +207,14 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={5}
+          hasMore={true}
           currentPage={1}
           pageSize={10}
           onPaginationChange={handlePaginationChange}
         />
       );
 
-      // Find and click the Next button (second button)
+      // Find and click the Next button
       const buttons = screen.getAllByRole('button');
       const nextButton = buttons.find((btn) => btn.title === 'Next page');
 
@@ -231,7 +230,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={5}
+          hasMore={true}
           currentPage={3}
           pageSize={10}
           onPaginationChange={handlePaginationChange}
@@ -246,11 +245,11 @@ describe('NotificationsTable — Phase 3', () => {
       expect(handlePaginationChange).toHaveBeenCalledWith(2);
     });
 
-    it('disables Next button on last page', () => {
+    it('disables Next button when hasMore is false', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={3}
+          hasMore={false}
           currentPage={3}
           pageSize={10}
           onPaginationChange={jest.fn()}
@@ -267,7 +266,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={3}
+          hasMore={true}
           currentPage={1}
           pageSize={10}
           onPaginationChange={jest.fn()}
@@ -279,50 +278,6 @@ describe('NotificationsTable — Phase 3', () => {
 
       expect(prevButton).toBeDisabled();
     });
-
-    it('calls onPaginationChange with 1 when clicking First page button', async () => {
-      const user = userEvent.setup();
-      const handlePaginationChange = jest.fn();
-
-      render(
-        <NotificationsTable
-          data={mockNotifications}
-          pageCount={5}
-          currentPage={3}
-          pageSize={10}
-          onPaginationChange={handlePaginationChange}
-        />
-      );
-
-      const buttons = screen.getAllByRole('button');
-      const firstButton = buttons.find((btn) => btn.title === 'First page');
-
-      await user.click(firstButton!);
-
-      expect(handlePaginationChange).toHaveBeenCalledWith(1);
-    });
-
-    it('calls onPaginationChange with pageCount when clicking Last page button', async () => {
-      const user = userEvent.setup();
-      const handlePaginationChange = jest.fn();
-
-      render(
-        <NotificationsTable
-          data={mockNotifications}
-          pageCount={5}
-          currentPage={1}
-          pageSize={10}
-          onPaginationChange={handlePaginationChange}
-        />
-      );
-
-      const buttons = screen.getAllByRole('button');
-      const lastButton = buttons.find((btn) => btn.title === 'Last page');
-
-      await user.click(lastButton!);
-
-      expect(handlePaginationChange).toHaveBeenCalledWith(5);
-    });
   });
 
   describe('3.5: Loading State', () => {
@@ -330,7 +285,7 @@ describe('NotificationsTable — Phase 3', () => {
       const { container } = render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
           isLoading={true}
@@ -346,7 +301,7 @@ describe('NotificationsTable — Phase 3', () => {
       render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={5}
+          hasMore={true}
           currentPage={2}
           pageSize={10}
           isLoading={true}
@@ -367,7 +322,7 @@ describe('NotificationsTable — Phase 3', () => {
       const { container } = render(
         <NotificationsTable
           data={mockNotifications}
-          pageCount={1}
+          hasMore={false}
           currentPage={1}
           pageSize={10}
           isLoading={false}

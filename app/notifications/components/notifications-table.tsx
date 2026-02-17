@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ type DataRow = Row<AnyDashboardNotification> & {
 
 interface NotificationsTableProps {
   data: AnyDashboardNotification[];
-  pageCount: number;
+  hasMore: boolean;
   currentPage: number;
   pageSize: number;
   isLoading?: boolean;
@@ -56,7 +56,7 @@ interface NotificationsTableProps {
  * Uses TanStack Table for headless table logic and shadcn/ui for components.
  *
  * @param data - Array of notifications to display
- * @param pageCount - Total number of pages
+ * @param hasMore - Whether there are more pages after the current one
  * @param currentPage - Current page (1-indexed)
  * @param pageSize - Items per page
  * @param isLoading - Whether data is loading
@@ -65,7 +65,7 @@ interface NotificationsTableProps {
  */
 export function NotificationsTable({
   data,
-  pageCount,
+  hasMore,
   currentPage,
   pageSize,
   isLoading = false,
@@ -166,21 +166,12 @@ export function NotificationsTable({
       </div>
 
       {/* Pagination Controls */}
-      {pageCount > 1 && (
+      {(currentPage > 1 || hasMore) && (
         <div className="flex items-center justify-between px-2">
           <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {pageCount}
+            Page {currentPage}
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPaginationChange?.(1)}
-              disabled={currentPage === 1 || isLoading}
-              title="First page"
-            >
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -194,19 +185,10 @@ export function NotificationsTable({
               variant="outline"
               size="sm"
               onClick={() => onPaginationChange?.(currentPage + 1)}
-              disabled={currentPage >= pageCount || isLoading}
+              disabled={!hasMore || isLoading}
               title="Next page"
             >
               <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPaginationChange?.(pageCount)}
-              disabled={currentPage >= pageCount || isLoading}
-              title="Last page"
-            >
-              <ChevronsRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

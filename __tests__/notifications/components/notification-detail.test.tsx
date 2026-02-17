@@ -4,10 +4,9 @@
  */
 
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, act, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationDetail } from '@/app/notifications/components/notification-detail';
-import React, { Suspense } from 'react';
 
 // Mock the fetchNotificationDetail server action
 const mockFetchNotificationDetail = jest.fn();

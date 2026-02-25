@@ -19,14 +19,16 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
+    "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "vintasend": "^0.5.2",
-    "vintasend-medplum": "^0.5.2",
-    "vintasend-sendgrid": "^0.5.2"
+    "vintasend": "^0.6.2",
+    "vintasend-mailgun": "^0.6.2",
+    "vintasend-medplum": "^0.6.2"
   },
   "devDependencies": {
     "@medplum/core": "5.0.10",

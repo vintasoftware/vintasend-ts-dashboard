@@ -9,7 +9,7 @@ import { NotificationsLoadingFallback } from '@/app/notifications/loading';
  *
  * This page handles:
  * 1. Server-side rendering of initial data for fast TTI
- * 2. Reading URL search params (page, pageSize, status, notificationType, search)
+ * 2. Reading URL search params (page, pageSize, status, notificationType, and other filter fields)
  * 3. Calling fetchNotifications server action
  * 4. Rendering the client wrapper with initial state
  *
@@ -52,7 +52,15 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
   const filters: NotificationFilters = {
     status: params.status ? (String(params.status) as NotificationFilters['status']) : undefined,
     notificationType: params.notificationType ? (String(params.notificationType) as NotificationFilters['notificationType']) : undefined,
-    search: params.search ? String(params.search) : undefined,
+    adapterUsed: params.adapterUsed ? String(params.adapterUsed) : undefined,
+    userId: params.userId ? String(params.userId) : undefined,
+    bodyTemplate: params.bodyTemplate ? String(params.bodyTemplate) : undefined,
+    subjectTemplate: params.subjectTemplate ? String(params.subjectTemplate) : undefined,
+    contextName: params.contextName ? String(params.contextName) : undefined,
+    createdAtFrom: params.createdAtFrom ? String(params.createdAtFrom) : undefined,
+    createdAtTo: params.createdAtTo ? String(params.createdAtTo) : undefined,
+    sentAtFrom: params.sentAtFrom ? String(params.sentAtFrom) : undefined,
+    sentAtTo: params.sentAtTo ? String(params.sentAtTo) : undefined,
   };
 
   // Remove undefined values from filters object

@@ -5,6 +5,7 @@ import { resolveAuthStrategy } from "@/lib/auth";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { assertValidAuthConfig } from "@/lib/auth/validate-config";
 import { TopNavbar } from "./components/top-navbar";
+import { Toaster } from "@/components/ui/sonner";
 import type { AuthUser } from "@/lib/auth";
 
 const geistSans = Geist({
@@ -74,6 +75,7 @@ export default async function RootLayout({
         >
           {children}
         </RootLayoutContent>
+        <Toaster />
       </body>
     </html>
   );

@@ -2,7 +2,8 @@
 
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ArrowUpDown, ChevronDown, Eye } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Eye, HashIcon, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -82,6 +83,12 @@ export interface ColumnOptions {
    * Callback fired when "View Details" is clicked.
    */
   onViewDetails?: (id: string) => void;
+
+  /**
+   * Callback fired when "Resend" is clicked.
+   * Only shown for non-one-off notifications with status SENT or FAILED.
+   */
+  onResend?: (id: string) => void;
 }
 
 /**
@@ -89,21 +96,29 @@ export interface ColumnOptions {
  * Accepts options for action callbacks.
  */
 export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboardNotification>[] {
-  const { onViewDetails } = options;
+  const { onViewDetails, onResend } = options;
 
   const columns: ColumnDef<AnyDashboardNotification>[] = [
   {
     accessorKey: 'id',
     header: 'ID',
-    cell: ({ row }) => <span className="font-mono text-sm">{row.original.id}</span>,
-    size: 120,
+    cell: ({ row }) => (
+      <span className="font-mono text-xs">
+        {row.original.id}
+      </span>
+    ),
+    size: 90,
   },
 
   {
     accessorKey: 'title',
     header: 'Title',
-    cell: ({ row }) => row.original.title || '—',
-    size: 180,
+    cell: ({ row }) => (
+      <span className="truncate block max-w-[10rem]" title={row.original.title || undefined}>
+        {row.original.title || '—'}
+      </span>
+    ),
+    size: 160,
   },
 
   {
@@ -113,7 +128,7 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
       const type = row.original.notificationType;
       return <Badge variant={typeVariantMap[type]}>{type}</Badge>;
     },
-    size: 100,
+    size: 70,
   },
 
   {
@@ -123,58 +138,50 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
       const status = row.original.status;
       return <Badge variant={statusVariantMap[status]}>{status}</Badge>;
     },
-    size: 120,
+    size: 90,
   },
 
   {
     accessorKey: 'contextName',
     header: 'Context',
-    cell: ({ row }) => row.original.contextName || '—',
-    size: 150,
+    cell: ({ row }) => (
+      <span className="truncate block max-w-[7rem]" title={row.original.contextName || undefined}>
+        {row.original.contextName || '—'}
+      </span>
+    ),
+    size: 100,
   },
 
   {
     accessorKey: 'recipient',
     header: 'Recipient',
-    cell: ({ row }) => getRecipient(row.original),
+    cell: ({ row }) => {
+      const recipient = getRecipient(row.original);
+      return (
+        <span className="truncate block max-w-[12rem]" title={recipient}>
+          {recipient}
+        </span>
+      );
+    },
     size: 180,
   },
 
   {
     accessorKey: 'sendAfter',
-    header: 'Send After',
-    cell: ({ row }) => formatDate(row.original.sendAfter),
-    size: 160,
-  },
-
-  {
-    accessorKey: 'sentAt',
-    header: 'Sent At',
-    cell: ({ row }) => formatDate(row.original.sentAt),
-    size: 160,
-  },
-
-  {
-    accessorKey: 'createdAt',
     header: ({ column }) => (
       <Button
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        className="h-8"
+        className="h-8 -ml-3"
       >
-        Created At
-        <ArrowUpDown className="ml-2 h-4 w-4" />
+        Send After
+        <ArrowUpDown className="ml-1 h-3 w-3" />
       </Button>
     ),
-    cell: ({ row }) => formatDate(row.original.createdAt),
-    size: 160,
-  },
-
-  {
-    accessorKey: 'adapterUsed',
-    header: 'Adapter',
-    cell: ({ row }) => row.original.adapterUsed || '—',
-    size: 120,
+    cell: ({ row }) => (
+      <span className="text-xs whitespace-nowrap">{formatDate(row.original.sendAfter)}</span>
+    ),
+    size: 130,
   },
 
     {
@@ -182,7 +189,7 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
       header: 'Actions',
       cell: ({ row }) => (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
             <Button variant="ghost" className="h-8 w-8 p-0">
               <span className="sr-only">Open menu</span>
               <ChevronDown className="h-4 w-4" />
@@ -192,7 +199,10 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => onViewDetails?.(row.original.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewDetails?.(row.original.id);
+              }}
               disabled={!onViewDetails}
               data-testid={`view-details-${row.original.id}`}
             >
@@ -200,14 +210,36 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
               View Details
             </DropdownMenuItem>
             <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(row.original.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(row.original.id);
+                toast.success('Notification ID copied to clipboard');
+              }}
             >
+              <HashIcon className="h-4 w-4 mr-2" />
               Copy ID
             </DropdownMenuItem>
+            {onResend &&
+              !isOneOff(row.original) &&
+              (row.original.status === 'SENT' || row.original.status === 'FAILED') && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onResend(row.original.id);
+                    }}
+                    data-testid={`resend-${row.original.id}`}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Resend
+                  </DropdownMenuItem>
+                </>
+              )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),
-      size: 80,
+      size: 60,
     },
   ];
 

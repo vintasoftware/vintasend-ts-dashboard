@@ -6,6 +6,7 @@ import type { AnyDashboardNotification, NotificationFilters, PaginatedResult } f
 import { NotificationsFilters } from './notifications-filters';
 import { NotificationsTable } from './notifications-table';
 import { NotificationDetail } from './notification-detail';
+import { ResendNotificationDialog } from './resend-notification-dialog';
 import { fetchNotifications } from '../actions';
 
 interface NotificationsPageClientProps {
@@ -39,6 +40,9 @@ export function NotificationsPageClient({
   // Detail panel state
   const [selectedNotificationId, setSelectedNotificationId] = useState<string | null>(null);
 
+  // Resend dialog state
+  const [resendNotificationId, setResendNotificationId] = useState<string | null>(null);
+
   /**
    * Handle opening the notification detail panel.
    */
@@ -54,6 +58,34 @@ export function NotificationsPageClient({
   }, []);
 
   /**
+   * Handle opening the resend confirmation dialog.
+   */
+  const handleResendClick = useCallback((id: string) => {
+    setResendNotificationId(id);
+  }, []);
+
+  /**
+   * Handle closing the resend confirmation dialog.
+   */
+  const handleResendClose = useCallback(() => {
+    setResendNotificationId(null);
+  }, []);
+
+  /**
+   * Handle successful resend - refresh the current page data.
+   */
+  const handleResent = useCallback(() => {
+    startTransition(async () => {
+      try {
+        const result = await fetchNotifications(initialFilters, data.page, data.pageSize);
+        setData(result);
+      } catch (error) {
+        console.error('Error refreshing notifications after resend:', error);
+      }
+    });
+  }, [initialFilters, data.page, data.pageSize]);
+
+  /**
    * Handle filter changes from the filter component.
    * Updates URL search params and fetches new data.
    */
@@ -65,22 +97,19 @@ export function NotificationsPageClient({
           const params = new URLSearchParams(searchParams);
 
           // Update or remove filter params
-          if (newFilters.status) {
-            params.set('status', newFilters.status);
-          } else {
-            params.delete('status');
-          }
-
-          if (newFilters.notificationType) {
-            params.set('notificationType', newFilters.notificationType);
-          } else {
-            params.delete('notificationType');
-          }
-
-          if (newFilters.search) {
-            params.set('search', newFilters.search);
-          } else {
-            params.delete('search');
+          // Sync all filter fields to URL search params
+          const filterKeys: (keyof NotificationFilters)[] = [
+            'status', 'notificationType', 'adapterUsed', 'userId',
+            'bodyTemplate', 'subjectTemplate', 'contextName',
+            'createdAtFrom', 'createdAtTo', 'sentAtFrom', 'sentAtTo',
+          ];
+          for (const key of filterKeys) {
+            const value = newFilters[key];
+            if (value) {
+              params.set(key, value);
+            } else {
+              params.delete(key);
+            }
           }
 
           // Always reset to page 1 when filters change
@@ -154,12 +183,20 @@ export function NotificationsPageClient({
         isLoading={isPending}
         onPaginationChange={handlePaginationChange}
         onRowClick={handleRowClick}
+        onResend={handleResendClick}
       />
 
       {/* Notification Detail Panel */}
       <NotificationDetail
         notificationId={selectedNotificationId}
         onClose={handleDetailClose}
+      />
+
+      {/* Resend Notification Dialog */}
+      <ResendNotificationDialog
+        notificationId={resendNotificationId}
+        onClose={handleResendClose}
+        onResent={handleResent}
       />
     </div>
   );

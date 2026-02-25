@@ -49,6 +49,12 @@ interface NotificationsTableProps {
    * @param id - Notification ID
    */
   onRowClick?: (id: string) => void;
+  /**
+   * Callback fired when the "Resend" action is clicked.
+   * Only shown for non-one-off notifications with status SENT or FAILED.
+   * @param id - Notification ID
+   */
+  onResend?: (id: string) => void;
 }
 
 /**
@@ -71,11 +77,12 @@ export function NotificationsTable({
   isLoading = false,
   onPaginationChange,
   onRowClick,
+  onResend,
 }: NotificationsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Create columns with action callbacks
-  const columns = onRowClick ? createColumns({ onViewDetails: onRowClick }) : defaultColumns;
+  const columns = (onRowClick || onResend) ? createColumns({ onViewDetails: onRowClick, onResend }) : defaultColumns;
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -111,13 +118,13 @@ export function NotificationsTable({
   return (
     <div className="space-y-4">
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id} className="py-3 px-4">
+                  <TableHead key={header.id} className="py-2 px-3 text-xs">
                     {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
@@ -146,14 +153,14 @@ export function NotificationsTable({
                   {row.isSkeleton ? (
                     // Skeleton row
                     Array.from({ length: columns.length }).map((_, i) => (
-                      <TableCell key={`${row.id}-skeleton-${i}`} className="py-3 px-4">
+                      <TableCell key={`${row.id}-skeleton-${i}`} className="py-2 px-3">
                         <Skeleton className="h-4 w-full" />
                       </TableCell>
                     ))
                   ) : (
                     // Normal row
                     row.getVisibleCells().map((cell: Cell<AnyDashboardNotification, unknown>) => (
-                      <TableCell key={cell.id} className="py-3 px-4">
+                      <TableCell key={cell.id} className="py-2 px-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))

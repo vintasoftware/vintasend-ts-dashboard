@@ -3,6 +3,7 @@ import type { VintaSendFactory } from 'vintasend';
 import type { NotificationTypeConfig as VintaSendConfig } from '../../../../examples/vintasend-medplum-example/lib/notification-service';
 import { getNotificationService } from '../../../../examples/vintasend-medplum-example/lib/notification-service';
 import { MedplumClient } from '@medplum/core';
+import { MedplumSingleton } from '../../../../examples/vintasend-medplum-example/lib/medplum-singleton';
 
 export type { VintaSendConfig };
 
@@ -28,10 +29,13 @@ export async function getVintaSendService(): Promise<ReturnType<VintaSendFactory
     clientSecret: process.env.MEDPLUM_CLIENT_SECRET || '',
   });
 
+  MedplumSingleton.setInstance(medplum);
+
   return getNotificationService(medplum, {
-    SENDGRID_API_KEY: process.env.SENDGRID_API_KEY || '',
-    SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL || '',
-    SENDGRID_FROM_NAME: process.env.SENDGRID_FROM_NAME || 'VintaSend Dashboard',
+    MAILGUN_API_KEY: process.env.MAILGUN_API_KEY || '',
+    MAILGUN_FROM_EMAIL: process.env.MAILGUN_FROM_EMAIL || '',
+    MAILGUN_FROM_NAME: process.env.MAILGUN_FROM_NAME || 'VintaSend Dashboard',
+    MAILGUN_DOMAIN: process.env.MAILGUN_DOMAIN || '',
   });
 }
 
@@ -55,12 +59,15 @@ export async function validateBackendConfig(): Promise<string[]> {
     errors.push('MEDPLUM_CLIENT_SECRET is required');
   }
 
-  // SendGrid configuration
-  if (!process.env.SENDGRID_API_KEY) {
-    errors.push('SENDGRID_API_KEY is required');
+  // Mailgun configuration
+  if (!process.env.MAILGUN_API_KEY) {
+    errors.push('MAILGUN_API_KEY is required');
   }
-  if (!process.env.SENDGRID_FROM_EMAIL) {
-    errors.push('SENDGRID_FROM_EMAIL is required');
+  if (!process.env.MAILGUN_FROM_EMAIL) {
+    errors.push('MAILGUN_FROM_EMAIL is required');
+  }
+  if (!process.env.MAILGUN_DOMAIN) {
+    errors.push('MAILGUN_DOMAIN is required');
   }
 
   return errors;

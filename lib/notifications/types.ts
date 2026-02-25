@@ -14,7 +14,7 @@ import type {
 import type {
   NotificationType,
 } from 'vintasend/dist/types/notification-type';
-import { VintaSendConfig } from './get-vintasend-service';
+import type { VintaSendConfig } from './get-vintasend-service';
 
 export type {
   JsonValue,
@@ -113,11 +113,20 @@ export type AnyDashboardNotificationDetail =
 
 /**
  * Filters for querying notifications.
+ * Maps to VintaSend's NotificationFilterFields for server-side filtering.
  */
 export type NotificationFilters = {
   status?: NotificationStatus;
   notificationType?: NotificationType;
-  search?: string; // Free-text search on title, id, or emailOrPhone
+  adapterUsed?: string;
+  userId?: string;
+  bodyTemplate?: string;
+  subjectTemplate?: string;
+  contextName?: string;
+  createdAtFrom?: string; // ISO date string
+  createdAtTo?: string; // ISO date string
+  sentAtFrom?: string; // ISO date string
+  sentAtTo?: string; // ISO date string
 };
 
 /**

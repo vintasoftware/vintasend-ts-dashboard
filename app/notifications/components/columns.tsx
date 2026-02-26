@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ArrowUpDown, ChevronDown, Eye, FileText, HashIcon, RefreshCw } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Eye, FileText, HashIcon, RefreshCw, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +75,21 @@ function getRecipient(notification: AnyDashboardNotification): string {
   return regularNotification.userId || '—';
 }
 
+function canPreviewRender(
+  notification: AnyDashboardNotification,
+  onPreviewRender?: (id: string) => void,
+): boolean {
+  if (!onPreviewRender) {
+    return false;
+  }
+
+  if (notification.gitCommitSha) {
+    return true;
+  }
+
+  return notification.status === 'PENDING_SEND';
+}
+
 /**
  * Options for generating column definitions.
  */
@@ -94,6 +109,12 @@ export interface ColumnOptions {
    * Callback fired when "Preview render" is clicked.
    */
   onPreviewRender?: (id: string) => void;
+
+  /**
+   * Callback fired when "Cancel" is clicked.
+   * Only shown for notifications with status PENDING_SEND.
+   */
+  onCancel?: (id: string) => void;
 }
 
 /**
@@ -101,7 +122,7 @@ export interface ColumnOptions {
  * Accepts options for action callbacks.
  */
 export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboardNotification>[] {
-  const { onViewDetails, onResend, onPreviewRender } = options;
+  const { onViewDetails, onResend, onPreviewRender, onCancel } = options;
 
   const columns: ColumnDef<AnyDashboardNotification>[] = [
   {
@@ -227,9 +248,12 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
             <DropdownMenuItem
               onClick={(e) => {
                 e.stopPropagation();
+                if (!canPreviewRender(row.original, onPreviewRender)) {
+                  return;
+                }
                 onPreviewRender?.(row.original.id);
               }}
-              disabled={!onPreviewRender}
+              disabled={!canPreviewRender(row.original, onPreviewRender)}
               data-testid={`preview-render-${row.original.id}`}
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -252,6 +276,21 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
                   </DropdownMenuItem>
                 </>
               )}
+            {onCancel && row.original.status === 'PENDING_SEND' && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCancel(row.original.id);
+                  }}
+                  data-testid={`cancel-${row.original.id}`}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       ),

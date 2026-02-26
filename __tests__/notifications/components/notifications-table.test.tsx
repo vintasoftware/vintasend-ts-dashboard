@@ -4,7 +4,7 @@
  */
 
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationsTable } from '@/app/notifications/components/notifications-table';
 import type { AnyDashboardNotification } from '@/lib/notifications/types';
@@ -362,6 +362,116 @@ describe('NotificationsTable — Phase 3', () => {
       await user.click(previewRenderItem);
 
       expect(handlePreviewRender).toHaveBeenCalledWith('1');
+    });
+
+    it('keeps Preview render enabled for PENDING_SEND notifications without gitCommitSha', async () => {
+      const user = userEvent.setup();
+      const handlePreviewRender = jest.fn();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={10}
+          onPreviewRender={handlePreviewRender}
+        />,
+      );
+
+      const actionButtons = screen.getAllByRole('button', { name: /open menu/i });
+      await user.click(actionButtons[1]);
+
+      const previewRenderItem = await screen.findByTestId('preview-render-2');
+      expect(previewRenderItem).toBeEnabled();
+
+      await user.click(previewRenderItem);
+      expect(handlePreviewRender).toHaveBeenCalledWith('2');
+    });
+
+    it('disables Preview render for non-PENDING_SEND notifications without gitCommitSha', async () => {
+      const user = userEvent.setup();
+      const handlePreviewRender = jest.fn();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={10}
+          onPreviewRender={handlePreviewRender}
+        />,
+      );
+
+      const actionButtons = screen.getAllByRole('button', { name: /open menu/i });
+      await user.click(actionButtons[2]);
+
+      const previewRenderItem = await screen.findByTestId('preview-render-3');
+      expect(previewRenderItem).toHaveAttribute('aria-disabled', 'true');
+      expect(previewRenderItem).toHaveAttribute('data-disabled', '');
+      expect(handlePreviewRender).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Phase 8: Cancel action', () => {
+    it('shows Cancel only for PENDING_SEND notifications when onCancel is provided', async () => {
+      const user = userEvent.setup();
+
+      const { unmount } = render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={10}
+          onCancel={jest.fn()}
+        />,
+      );
+
+      const firstRowActionButton = within(screen.getByTestId('notification-row-1')).getByRole('button', {
+        name: /open menu/i,
+      });
+      await user.click(firstRowActionButton);
+      expect(screen.queryByTestId('cancel-1')).not.toBeInTheDocument();
+
+      unmount();
+
+      render(
+        <NotificationsTable
+          data={[mockNotifications[1]]}
+          hasMore={false}
+          currentPage={1}
+          pageSize={10}
+          onCancel={jest.fn()}
+        />,
+      );
+
+      const secondRowActionButton = within(screen.getByTestId('notification-row-0')).getByRole('button', {
+        name: /open menu/i,
+      });
+      await user.click(secondRowActionButton);
+      expect(await screen.findByTestId('cancel-2')).toBeInTheDocument();
+    });
+
+    it('calls onCancel when clicking Cancel in the actions menu', async () => {
+      const user = userEvent.setup();
+      const handleCancel = jest.fn();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={10}
+          onCancel={handleCancel}
+        />,
+      );
+
+      const actionButtons = screen.getAllByRole('button', { name: /open menu/i });
+      await user.click(actionButtons[1]);
+
+      const cancelItem = await screen.findByTestId('cancel-2');
+      await user.click(cancelItem);
+
+      expect(handleCancel).toHaveBeenCalledWith('2');
     });
   });
 });

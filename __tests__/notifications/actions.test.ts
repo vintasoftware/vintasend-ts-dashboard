@@ -7,6 +7,10 @@
 jest.mock('@/lib/notifications/get-vintasend-service', () => ({
   getVintaSendService: jest.fn().mockResolvedValue({
     getNotifications: jest.fn().mockResolvedValue([]),
+    getBackendSupportedFilterCapabilities: jest.fn().mockResolvedValue({
+      'stringLookups.includes': true,
+      'stringLookups.caseInsensitive': true,
+    }),
     filterNotifications: jest.fn().mockResolvedValue([]),
     getPendingNotifications: jest.fn().mockResolvedValue([]),
     getFutureNotifications: jest.fn().mockResolvedValue([]),
@@ -14,19 +18,23 @@ jest.mock('@/lib/notifications/get-vintasend-service', () => ({
     getNotification: jest.fn().mockResolvedValue(null),
     getOneOffNotification: jest.fn().mockResolvedValue(null),
     renderEmailTemplateFromContent: jest.fn(),
+    cancelNotification: jest.fn().mockResolvedValue(undefined),
   }),
   validateBackendConfig: jest.fn().mockResolvedValue([]),
 }));
 
 const mockGitHubGetTemplateContentByCommit = jest.fn();
+const mockGitHubGetLatestMainCommitSha = jest.fn();
 
 jest.mock('@/lib/notifications/github-template-client', () => ({
   createGitHubTemplateClientFromEnv: jest.fn(() => ({
     getTemplateContentByCommit: mockGitHubGetTemplateContentByCommit,
+    getLatestMainCommitSha: mockGitHubGetLatestMainCommitSha,
   })),
 }));
 
 import {
+  cancelNotification,
   fetchNotifications,
   fetchNotificationDetail,
   fetchPendingNotifications,
@@ -67,6 +75,7 @@ describe('Notification Server Actions — Phase 2', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockGitHubGetTemplateContentByCommit.mockReset();
+    mockGitHubGetLatestMainCommitSha.mockReset();
     const mockFilteredNotifications = [
       createMockNotification({ id: 'notif-1', status: 'SENT' }),
       createMockNotification({ id: 'notif-2', status: 'PENDING_SEND', notificationType: 'SMS' }),
@@ -76,6 +85,10 @@ describe('Notification Server Actions — Phase 2', () => {
     // Setup default mock responses
     const mockService = {
       getNotifications: jest.fn().mockResolvedValue(mockFilteredNotifications),
+      getBackendSupportedFilterCapabilities: jest.fn().mockResolvedValue({
+        'stringLookups.includes': true,
+        'stringLookups.caseInsensitive': true,
+      }),
       filterNotifications: jest.fn().mockImplementation((filter) => {
         if (filter?.status === 'PENDING_SEND') {
           return Promise.resolve(
@@ -106,6 +119,7 @@ describe('Notification Server Actions — Phase 2', () => {
         subject: '<strong>Subject</strong>',
         body: '<p>Body template</p>',
       }),
+      cancelNotification: jest.fn().mockResolvedValue(undefined),
     };
     (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
   });
@@ -308,6 +322,7 @@ describe('Notification Server Actions — Phase 2', () => {
         expect(result.renderedSubjectHtml).toBe('<strong>Rendered Subject</strong>');
       }
       expect(mockGitHubGetTemplateContentByCommit).toHaveBeenCalledTimes(2);
+      expect(mockGitHubGetLatestMainCommitSha).not.toHaveBeenCalled();
       expect(mockService.renderEmailTemplateFromContent).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'notif-preview' }),
         {
@@ -320,11 +335,49 @@ describe('Notification Server Actions — Phase 2', () => {
       );
     });
 
-    it('returns missing_sha when notification has no gitCommitSha', async () => {
+    it('uses latest main branch commit sha when notification is PENDING_SEND and has no gitCommitSha', async () => {
+      const mockService = {
+        getNotification: jest.fn().mockResolvedValue(
+          createMockNotification({
+            id: 'notif-pending-no-sha',
+            status: 'PENDING_SEND',
+            gitCommitSha: null,
+            bodyTemplate: 'templates/body.pug',
+            subjectTemplate: 'templates/subject.pug',
+          }),
+        ),
+        getOneOffNotification: jest.fn().mockResolvedValue(null),
+        renderEmailTemplateFromContent: jest.fn().mockResolvedValue({
+          subject: '<strong>Rendered Subject</strong>',
+          body: '<p>Rendered Body</p>',
+        }),
+      };
+      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+
+      mockGitHubGetLatestMainCommitSha.mockResolvedValue('m'.repeat(40));
+      mockGitHubGetTemplateContentByCommit
+        .mockResolvedValueOnce('<p>Body template</p>')
+        .mockResolvedValueOnce('Subject template');
+
+      const result = await fetchNotificationPreview('notif-pending-no-sha');
+
+      expect(result.state).toBe('success');
+      if (result.state === 'success') {
+        expect(result.gitCommitSha).toBe('m'.repeat(40));
+      }
+      expect(mockGitHubGetLatestMainCommitSha).toHaveBeenCalledTimes(1);
+      expect(mockGitHubGetTemplateContentByCommit).toHaveBeenCalledWith({
+        templatePath: 'templates/body.pug',
+        gitCommitSha: 'm'.repeat(40),
+      });
+    });
+
+    it('returns missing_sha when notification has no gitCommitSha and is not PENDING_SEND', async () => {
       const mockService = {
         getNotification: jest.fn().mockResolvedValue(
           createMockNotification({
             id: 'notif-no-sha',
+            status: 'FAILED',
             gitCommitSha: null,
           }),
         ),
@@ -336,6 +389,7 @@ describe('Notification Server Actions — Phase 2', () => {
       const result = await fetchNotificationPreview('notif-no-sha');
 
       expect(result.state).toBe('missing_sha');
+      expect(mockGitHubGetLatestMainCommitSha).not.toHaveBeenCalled();
       expect(mockGitHubGetTemplateContentByCommit).not.toHaveBeenCalled();
     });
 
@@ -362,6 +416,49 @@ describe('Notification Server Actions — Phase 2', () => {
         state: 'error',
         message: 'GitHub API rate limit exceeded while fetching template preview.',
       });
+    });
+  });
+
+  describe('cancelNotification', () => {
+    it('cancels notifications in PENDING_SEND status', async () => {
+      const mockService = {
+        getNotification: jest.fn().mockResolvedValue(
+          createMockNotification({
+            id: 'notif-pending',
+            status: 'PENDING_SEND',
+          }),
+        ),
+        getOneOffNotification: jest.fn().mockResolvedValue(null),
+        cancelNotification: jest.fn().mockResolvedValue(undefined),
+      };
+      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+
+      const result = await cancelNotification('notif-pending');
+
+      expect(result).toEqual({ success: true });
+      expect(mockService.cancelNotification).toHaveBeenCalledWith('notif-pending');
+    });
+
+    it('returns error when notification is not PENDING_SEND', async () => {
+      const mockService = {
+        getNotification: jest.fn().mockResolvedValue(
+          createMockNotification({
+            id: 'notif-sent',
+            status: 'SENT',
+          }),
+        ),
+        getOneOffNotification: jest.fn().mockResolvedValue(null),
+        cancelNotification: jest.fn().mockResolvedValue(undefined),
+      };
+      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+
+      const result = await cancelNotification('notif-sent');
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Only notifications in PENDING_SEND status can be cancelled.',
+      });
+      expect(mockService.cancelNotification).not.toHaveBeenCalled();
     });
   });
 });

@@ -61,6 +61,13 @@ interface NotificationsTableProps {
    * @param id - Notification ID
    */
   onPreviewRender?: (id: string) => void;
+
+  /**
+   * Callback fired when the "Cancel" action is clicked.
+   * Only shown for notifications with status PENDING_SEND.
+   * @param id - Notification ID
+   */
+  onCancel?: (id: string) => void;
 }
 
 /**
@@ -85,12 +92,13 @@ export function NotificationsTable({
   onRowClick,
   onResend,
   onPreviewRender,
+  onCancel,
 }: NotificationsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Create columns with action callbacks
-  const columns = (onRowClick || onResend || onPreviewRender)
-    ? createColumns({ onViewDetails: onRowClick, onResend, onPreviewRender })
+  const columns = (onRowClick || onResend || onPreviewRender || onCancel)
+    ? createColumns({ onViewDetails: onRowClick, onResend, onPreviewRender, onCancel })
     : defaultColumns;
 
   // eslint-disable-next-line react-hooks/incompatible-library

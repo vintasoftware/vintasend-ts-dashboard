@@ -223,25 +223,32 @@ export async function fetchNotificationPreview(
       };
     }
 
-    if (!notification.gitCommitSha) {
+    const githubClient = createGitHubTemplateClientFromEnv();
+
+    let gitCommitShaForPreview = notification.gitCommitSha;
+
+    if (!gitCommitShaForPreview && notification.status === 'PENDING_SEND') {
+      gitCommitShaForPreview = await githubClient.getLatestMainCommitSha();
+    }
+
+    if (!gitCommitShaForPreview) {
       return {
         state: 'missing_sha',
         message:
-          'This notification does not have a tracked git commit SHA, so historical preview is unavailable.',
+          'This notification does not have a tracked git commit SHA and is not pending send, so preview is unavailable.',
       };
     }
 
-    const githubClient = createGitHubTemplateClientFromEnv();
     const bodyTemplateContent = await githubClient.getTemplateContentByCommit({
       templatePath: notification.bodyTemplate,
-      gitCommitSha: notification.gitCommitSha,
+      gitCommitSha: gitCommitShaForPreview,
     });
 
     let subjectTemplateContent: string | null = null;
     if (notification.subjectTemplate) {
       subjectTemplateContent = await githubClient.getTemplateContentByCommit({
         templatePath: notification.subjectTemplate,
-        gitCommitSha: notification.gitCommitSha,
+        gitCommitSha: gitCommitShaForPreview,
       });
     }
 
@@ -263,7 +270,7 @@ export async function fetchNotificationPreview(
 
     return {
       state: 'success',
-      gitCommitSha: notification.gitCommitSha,
+      gitCommitSha: gitCommitShaForPreview,
       bodyTemplatePath: notification.bodyTemplate,
       subjectTemplatePath: notification.subjectTemplate,
       renderedBodyHtml: renderedTemplate.body,
@@ -412,6 +419,48 @@ export async function resendNotification(
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred while resending notification',
+    };
+  }
+}
+
+/**
+ * Cancels a notification if it is still pending send.
+ *
+ * @param notificationId - The ID of the notification to cancel
+ * @returns Success state or error message
+ */
+export async function cancelNotification(
+  notificationId: string,
+): Promise<{ success: true } | { success: false; error: string }> {
+  try {
+    const service = await getVintaSendService();
+
+    const notification =
+      (await service.getNotification(notificationId, false))
+      ?? (await service.getOneOffNotification(notificationId, false));
+
+    if (!notification) {
+      return {
+        success: false,
+        error: `Notification with ID ${notificationId} not found.`,
+      };
+    }
+
+    if (notification.status !== 'PENDING_SEND') {
+      return {
+        success: false,
+        error: 'Only notifications in PENDING_SEND status can be cancelled.',
+      };
+    }
+
+    await service.cancelNotification(notificationId);
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error cancelling notification:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred while cancelling notification',
     };
   }
 }

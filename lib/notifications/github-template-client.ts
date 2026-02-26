@@ -18,6 +18,11 @@ type GitHubFileContentResponse = {
   message?: string;
 };
 
+type GitHubCommitResponse = {
+  sha?: string;
+  message?: string;
+};
+
 export type TemplateContentRequest = {
   templatePath: string;
   gitCommitSha: string;
@@ -57,11 +62,7 @@ export class GitHubTemplateClient {
     const apiUrl = this.buildApiUrl(resolvedPath, request.gitCommitSha);
     const response = await this.fetcher(apiUrl, {
       method: 'GET',
-      headers: {
-        Accept: 'application/vnd.github+json',
-        Authorization: `Bearer ${this.config.apiKey}`,
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
+      headers: this.buildHeaders(),
       cache: 'no-store',
     });
 
@@ -80,6 +81,26 @@ export class GitHubTemplateClient {
     return decoded;
   }
 
+  async getLatestMainCommitSha(): Promise<string> {
+    const apiUrl = `${this.config.apiBaseUrl}/repos/${this.config.repo}/commits/main`;
+    const response = await this.fetcher(apiUrl, {
+      method: 'GET',
+      headers: this.buildHeaders(),
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      throw await this.buildCommitLookupHttpError(response);
+    }
+
+    const payload = (await response.json()) as GitHubCommitResponse;
+    if (!payload.sha) {
+      throw new Error('GitHub main branch commit lookup returned an invalid response.');
+    }
+
+    return payload.sha;
+  }
+
   private buildApiUrl(path: string, gitCommitSha: string): string {
     const encodedPath = path
       .split('/')
@@ -92,6 +113,14 @@ export class GitHubTemplateClient {
 
   private buildCacheKey(path: string, gitCommitSha: string): string {
     return `${this.config.repo}:${path}:${gitCommitSha}`;
+  }
+
+  private buildHeaders(): Record<string, string> {
+    return {
+      Accept: 'application/vnd.github+json',
+      Authorization: `Bearer ${this.config.apiKey}`,
+      'X-GitHub-Api-Version': '2022-11-28',
+    };
   }
 
   private setCache(key: string, value: string): void {
@@ -141,6 +170,40 @@ export class GitHubTemplateClient {
 
     return new Error(
       `GitHub template fetch failed with status ${response.status}${messageSuffix}`,
+    );
+  }
+
+  private async buildCommitLookupHttpError(response: Response): Promise<Error> {
+    if (response.status === 404) {
+      return new Error('Unable to resolve latest commit SHA from the main branch.');
+    }
+
+    if (response.status === 403) {
+      const remaining = response.headers.get('x-ratelimit-remaining');
+      if (remaining === '0') {
+        return new Error('GitHub API rate limit exceeded while fetching template preview.');
+      }
+
+      return new Error('GitHub API request was forbidden. Check repository access and token permissions.');
+    }
+
+    if (response.status === 429) {
+      return new Error('GitHub API rate limit exceeded while fetching template preview.');
+    }
+
+    let messageSuffix = '';
+
+    try {
+      const body = (await response.json()) as GitHubCommitResponse;
+      if (body.message) {
+        messageSuffix = `: ${body.message}`;
+      }
+    } catch {
+      // noop
+    }
+
+    return new Error(
+      `GitHub main branch commit lookup failed with status ${response.status}${messageSuffix}`,
     );
   }
 }

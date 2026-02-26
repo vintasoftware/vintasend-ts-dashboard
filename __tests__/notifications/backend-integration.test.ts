@@ -31,6 +31,22 @@ jest.mock('@/lib/notifications/get-vintasend-service', () => ({
 // Import the mocked functions
 const { getVintaSendService, validateBackendConfig } = jest.requireMock('@/lib/notifications/get-vintasend-service');
 
+function createMockService(overrides: Record<string, any> = {}) {
+  return {
+    getBackendSupportedFilterCapabilities: jest.fn().mockResolvedValue({
+      'stringLookups.includes': true,
+      'stringLookups.caseInsensitive': true,
+    }),
+    filterNotifications: jest.fn().mockResolvedValue([]),
+    getPendingNotifications: jest.fn().mockResolvedValue([]),
+    getFutureNotifications: jest.fn().mockResolvedValue([]),
+    getOneOffNotifications: jest.fn().mockResolvedValue([]),
+    getNotification: jest.fn().mockResolvedValue(null),
+    getOneOffNotification: jest.fn().mockResolvedValue(null),
+    ...overrides,
+  };
+}
+
 describe('Phase 5 — Backend Integration Tests', () => {
   describe('Configuration Validation', () => {
     const originalEnv = process.env;
@@ -99,14 +115,14 @@ describe('Phase 5 — Backend Integration Tests', () => {
         },
       ];
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
         getPendingNotifications: jest.fn(),
         getFutureNotifications: jest.fn(),
         getOneOffNotifications: jest.fn(),
         getNotification: jest.fn(),
         getOneOffNotification: jest.fn(),
-      } as any);
+      }));
 
       const result = await fetchNotifications({}, 1, 10);
 
@@ -144,9 +160,9 @@ describe('Phase 5 — Backend Integration Tests', () => {
         .fn()
         .mockResolvedValue(mockPendingNotifications);
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         filterNotifications: mockFilterNotifications,
-      } as any);
+      }));
 
       await fetchNotifications({ status: 'PENDING_SEND' }, 1, 10);
 
@@ -158,10 +174,10 @@ describe('Phase 5 — Backend Integration Tests', () => {
     });
 
     it('Test 5.4: Empty result returns correct shape', async () => {
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         filterNotifications: jest.fn().mockResolvedValue([]),
         getPendingNotifications: jest.fn(),
-      } as any);
+      }));
 
       const result = await fetchNotifications({}, 1, 10);
 
@@ -193,9 +209,9 @@ describe('Phase 5 — Backend Integration Tests', () => {
         },
       ];
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
-      } as any);
+      }));
 
       const result = await fetchNotifications({}, 1, 10);
 
@@ -225,10 +241,10 @@ describe('Phase 5 — Backend Integration Tests', () => {
         extraParams: { campaignId: 'campaign-1' },
       };
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         getNotification: jest.fn().mockResolvedValue(mockNotification),
         getOneOffNotification: jest.fn().mockResolvedValue(null),
-      } as any);
+      }));
 
       const result = await fetchNotificationDetail('notif-detail');
 
@@ -259,9 +275,9 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const mockGetPending = jest.fn().mockResolvedValue(mockNotifications);
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         getPendingNotifications: mockGetPending,
-      } as any);
+      }));
 
       const result = await fetchPendingNotifications(1, 10);
 
@@ -293,9 +309,9 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const mockGetFuture = jest.fn().mockResolvedValue(mockNotifications);
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         getFutureNotifications: mockGetFuture,
-      } as any);
+      }));
 
       const result = await fetchFutureNotifications(1, 10);
 
@@ -327,9 +343,9 @@ describe('Phase 5 — Backend Integration Tests', () => {
 
       const mockGetOneOff = jest.fn().mockResolvedValue(mockNotifications);
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         getOneOffNotifications: mockGetOneOff,
-      } as any);
+      }));
 
       const result = await fetchOneOffNotifications(1, 10);
 
@@ -348,10 +364,10 @@ describe('Phase 5 — Backend Integration Tests', () => {
     });
 
     it('Test: fetchNotificationDetail throws when notification not found', async () => {
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         getNotification: jest.fn().mockResolvedValue(null),
         getOneOffNotification: jest.fn().mockResolvedValue(null),
-      } as any);
+      }));
 
       await expect(fetchNotificationDetail('non-existent')).rejects.toThrow(
         'Notification with ID non-existent not found',
@@ -392,9 +408,9 @@ describe('Phase 5 — Backend Integration Tests', () => {
         },
       ];
 
-      getVintaSendService.mockResolvedValue({
+      getVintaSendService.mockResolvedValue(createMockService({
         filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
-      } as any);
+      }));
 
       const result = await fetchNotifications({ notificationType: 'EMAIL' }, 1, 10);
 
@@ -402,48 +418,5 @@ describe('Phase 5 — Backend Integration Tests', () => {
       expect(result.data).toHaveLength(2);
     });
 
-    it('Test: Search filter passes through to backend (no client-side filtering)', async () => {
-      const mockNotifications = [
-        {
-          id: 'search-match',
-          userId: 'user-1',
-          notificationType: 'EMAIL' as const,
-          title: 'Important Message',
-          contextName: 'testContext',
-          status: 'SENT' as const,
-          sendAfter: null,
-          sentAt: new Date(),
-          readAt: null,
-          createdAt: new Date(),
-          adapterUsed: 'sendgrid',
-          bodyTemplate: 'Body',
-          subjectTemplate: 'Subject',
-        },
-        {
-          id: 'no-match',
-          userId: 'user-2',
-          notificationType: 'SMS' as const,
-          title: 'Regular Text',
-          contextName: 'testContext',
-          status: 'SENT' as const,
-          sendAfter: null,
-          sentAt: new Date(),
-          readAt: null,
-          createdAt: new Date(),
-          adapterUsed: 'twilio',
-          bodyTemplate: 'Body',
-          subjectTemplate: null,
-        },
-      ];
-
-      getVintaSendService.mockResolvedValue({
-        filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
-      } as any);
-
-      const result = await fetchNotifications({ search: 'important' }, 1, 10);
-
-      // No client-side filtering — all backend results returned
-      expect(result.data).toHaveLength(2);
-    });
   });
 });

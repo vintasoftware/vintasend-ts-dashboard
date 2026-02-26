@@ -2,13 +2,15 @@
 
 import { useCallback, useTransition, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import type { AnyDashboardNotification, NotificationFilters, PaginatedResult } from '@/lib/notifications/types';
 import { NotificationsFilters } from './notifications-filters';
 import { NotificationsTable } from './notifications-table';
 import { NotificationDetail } from './notification-detail';
 import { ResendNotificationDialog } from './resend-notification-dialog';
 import { PreviewRenderDialog } from './preview-render-dialog';
-import { fetchNotifications } from '../actions';
+import { CancelNotificationDialog } from './cancel-notification-dialog';
+import { cancelNotification, fetchNotifications } from '../actions';
 
 interface NotificationsPageClientProps {
   initialData: PaginatedResult<AnyDashboardNotification>;
@@ -46,6 +48,9 @@ export function NotificationsPageClient({
 
   // Preview render dialog state
   const [previewNotificationId, setPreviewNotificationId] = useState<string | null>(null);
+
+  // Cancel dialog state
+  const [cancelNotificationId, setCancelNotificationId] = useState<string | null>(null);
 
   /**
    * Handle opening the notification detail panel.
@@ -88,6 +93,43 @@ export function NotificationsPageClient({
   const handlePreviewRenderClose = useCallback(() => {
     setPreviewNotificationId(null);
   }, []);
+
+  /**
+   * Handle opening the cancel confirmation dialog.
+   */
+  const handleCancelClick = useCallback((id: string) => {
+    setCancelNotificationId(id);
+  }, []);
+
+  /**
+   * Handle closing the cancel confirmation dialog.
+   */
+  const handleCancelClose = useCallback(() => {
+    setCancelNotificationId(null);
+  }, []);
+
+  /**
+   * Handle confirmed cancellation of a pending notification.
+   */
+  const handleCancelConfirm = useCallback(async (id: string) => {
+    const result = await cancelNotification(id);
+
+    if (!result.success) {
+      toast.error(`Failed to cancel notification: ${result.error}`);
+      return;
+    }
+
+    toast.success('Notification cancelled successfully.');
+
+    setCancelNotificationId(null);
+
+    try {
+      const refreshed = await fetchNotifications(initialFilters, data.page, data.pageSize);
+      setData(refreshed);
+    } catch (error) {
+      console.error('Error refreshing notifications after cancellation:', error);
+    }
+  }, [initialFilters, data.page, data.pageSize]);
 
   /**
    * Handle successful resend - refresh the current page data.
@@ -203,6 +245,7 @@ export function NotificationsPageClient({
         onRowClick={handleRowClick}
         onResend={handleResendClick}
         onPreviewRender={handlePreviewRenderClick}
+        onCancel={handleCancelClick}
       />
 
       {/* Notification Detail Panel */}
@@ -221,6 +264,12 @@ export function NotificationsPageClient({
       <PreviewRenderDialog
         notificationId={previewNotificationId}
         onClose={handlePreviewRenderClose}
+      />
+
+      <CancelNotificationDialog
+        notificationId={cancelNotificationId}
+        onClose={handleCancelClose}
+        onConfirm={handleCancelConfirm}
       />
     </div>
   );

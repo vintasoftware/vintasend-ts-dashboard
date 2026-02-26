@@ -3,6 +3,37 @@
 This dashboard is a Next.js app with pluggable authentication (Clerk or Auth0)
 selected via environment variables.
 
+## After cloning
+
+1. Go to the dashboard folder:
+
+```bash
+cd src/tools/vintasend-dashboard
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create your local environment file from the example:
+
+```bash
+cp .env.example .env.local
+```
+
+4. Configure auth and backend variables in `.env.local`.
+5. Configure your VintaSend service in `lib/notifications/get-vintasend-service.ts` (see section below).
+6. Remove the `lib/notifications/get-vintasend-service.ts` from the `.gitignore` file.
+7. Start the app:
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
 ## Getting Started
 
 First, install dependencies and run the development server:
@@ -19,6 +50,27 @@ bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+## Configure your VintaSend service
+
+The dashboard uses `lib/notifications/get-vintasend-service.ts` as the backend
+factory for all notification actions. You must adapt this file to your own
+VintaSend implementation.
+
+Minimum setup:
+
+1. Open `lib/notifications/get-vintasend-service.ts`.
+2. Replace imports from the Medplum example with imports from your service
+	package/module.
+3. Build and return your configured VintaSend service in
+	`getVintaSendService()`.
+4. Update `validateBackendConfig()` so it checks only the environment
+	variables required by your backend.
+5. Ensure all required backend env vars are present in `.env.local`.
+
+You can use `lib/notifications/get-vintasend-service.ts.example` as a starting
+point and keep a project-specific implementation in
+`lib/notifications/get-vintasend-service.ts`.
 
 ## Authentication
 

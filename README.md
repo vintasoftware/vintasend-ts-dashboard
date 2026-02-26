@@ -65,6 +65,10 @@ auth flows, while the app layout wraps the UI with the provider component.
 | AUTH0_DOMAIN | Auth0 | Auth0 tenant domain without scheme (e.g. `example.us.auth0.com`). **Note:** In Auth0 v4, this was renamed from `AUTH0_ISSUER_BASE_URL` and no longer accepts `https://`. |
 | AUTH0_CLIENT_ID | Auth0 | Auth0 application client ID. |
 | AUTH0_CLIENT_SECRET | Auth0 | Auth0 application client secret. |
+| GITHUB_REPO | Notifications preview | GitHub repository in `owner/repo` format used to fetch templates by commit. |
+| GITHUB_API_KEY | Notifications preview | GitHub token with repository read access. |
+| GITHUB_API_BASE_URL | Notifications preview | Optional GitHub API base URL (defaults to `https://api.github.com`). |
+| GITHUB_TEMPLATES_BASE_PATH | Notifications preview | Optional base path prefixed to template paths before GitHub fetch. |
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 

@@ -243,11 +243,11 @@ export function NotificationsFilters({
 
         <div className="flex-1 min-w-0">
           <label htmlFor="user-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
-            User ID
+            Recipient ID
           </label>
           <Input
             id="user-filter"
-            placeholder="User ID"
+            placeholder="Recipient ID"
             value={userId}
             onChange={handleTextChange(setUserId, 'userId')}
             disabled={isLoading}
@@ -285,11 +285,11 @@ export function NotificationsFilters({
 
         <div className="flex-1 min-w-0">
           <label htmlFor="context-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
-            Context Name
+            Context
           </label>
           <Input
             id="context-filter"
-            placeholder="Context name"
+            placeholder="Context"
             value={contextName}
             onChange={handleTextChange(setContextName, 'contextName')}
             disabled={isLoading}

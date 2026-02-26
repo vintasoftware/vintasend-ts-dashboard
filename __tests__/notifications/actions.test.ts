@@ -7,13 +7,23 @@
 jest.mock('@/lib/notifications/get-vintasend-service', () => ({
   getVintaSendService: jest.fn().mockResolvedValue({
     getNotifications: jest.fn().mockResolvedValue([]),
+    filterNotifications: jest.fn().mockResolvedValue([]),
     getPendingNotifications: jest.fn().mockResolvedValue([]),
     getFutureNotifications: jest.fn().mockResolvedValue([]),
     getOneOffNotifications: jest.fn().mockResolvedValue([]),
     getNotification: jest.fn().mockResolvedValue(null),
     getOneOffNotification: jest.fn().mockResolvedValue(null),
+    renderEmailTemplateFromContent: jest.fn(),
   }),
   validateBackendConfig: jest.fn().mockResolvedValue([]),
+}));
+
+const mockGitHubGetTemplateContentByCommit = jest.fn();
+
+jest.mock('@/lib/notifications/github-template-client', () => ({
+  createGitHubTemplateClientFromEnv: jest.fn(() => ({
+    getTemplateContentByCommit: mockGitHubGetTemplateContentByCommit,
+  })),
 }));
 
 import {
@@ -22,6 +32,7 @@ import {
   fetchPendingNotifications,
   fetchFutureNotifications,
   fetchOneOffNotifications,
+  fetchNotificationPreview,
 } from '@/app/notifications/actions';
 import type {
   AnyDashboardNotification,
@@ -55,13 +66,26 @@ const createMockNotification = (overrides = {}) => ({
 describe('Notification Server Actions — Phase 2', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockGitHubGetTemplateContentByCommit.mockReset();
+    const mockFilteredNotifications = [
+      createMockNotification({ id: 'notif-1', status: 'SENT' }),
+      createMockNotification({ id: 'notif-2', status: 'PENDING_SEND', notificationType: 'SMS' }),
+      createMockNotification({ id: 'notif-3', status: 'SENT', notificationType: 'EMAIL' }),
+    ];
+
     // Setup default mock responses
     const mockService = {
-      getNotifications: jest.fn().mockResolvedValue([
-        createMockNotification({ id: 'notif-1', status: 'SENT' }),
-        createMockNotification({ id: 'notif-2', status: 'PENDING_SEND', notificationType: 'SMS' }),
-        createMockNotification({ id: 'notif-3', status: 'SENT', notificationType: 'EMAIL' }),
-      ]),
+      getNotifications: jest.fn().mockResolvedValue(mockFilteredNotifications),
+      filterNotifications: jest.fn().mockImplementation((filter) => {
+        if (filter?.status === 'PENDING_SEND') {
+          return Promise.resolve(
+            // @ts-expect-error: TypeScript may complain about the shape of the filter object, but we're just simulating behavior here
+            mockFilteredNotifications.filter((notification) => notification.status === 'PENDING_SEND'),
+          );
+        }
+
+        return Promise.resolve(mockFilteredNotifications);
+      }),
       getPendingNotifications: jest.fn().mockResolvedValue([
         createMockNotification({ id: 'notif-2', status: 'PENDING_SEND' }),
       ]),
@@ -78,6 +102,10 @@ describe('Notification Server Actions — Phase 2', () => {
       ]),
       getNotification: jest.fn().mockResolvedValue(createMockNotification()),
       getOneOffNotification: jest.fn().mockResolvedValue(null),
+      renderEmailTemplateFromContent: jest.fn().mockResolvedValue({
+        subject: '<strong>Subject</strong>',
+        body: '<p>Body template</p>',
+      }),
     };
     (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
   });
@@ -143,12 +171,6 @@ describe('Notification Server Actions — Phase 2', () => {
     it('passes filters through to backend without client-side filtering', async () => {
       const result = await fetchNotifications({ notificationType: 'EMAIL' }, 1, 100);
       // Without client-side filtering, all backend results are returned as-is
-      expect(result.data.length).toBe(3);
-    });
-
-    it('filters by search term are passed to backend (no client-side filtering)', async () => {
-      const result = await fetchNotifications({ search: 'notification' }, 1, 100);
-      // Backend returns all results; no client-side search filtering
       expect(result.data.length).toBe(3);
     });
 
@@ -249,6 +271,96 @@ describe('Notification Server Actions — Phase 2', () => {
           expect(typeof notification.readAt).toBe('string');
           expect(notification.readAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
         }
+      });
+    });
+  });
+
+  describe('fetchNotificationPreview', () => {
+    it('returns success payload with template content when notification has gitCommitSha', async () => {
+      const mockService = {
+        getNotification: jest.fn().mockResolvedValue(
+          createMockNotification({
+            id: 'notif-preview',
+            gitCommitSha: 'a'.repeat(40),
+            bodyTemplate: 'templates/body.pug',
+            subjectTemplate: 'templates/subject.pug',
+            contextUsed: { patientName: 'John' },
+          }),
+        ),
+        getOneOffNotification: jest.fn().mockResolvedValue(null),
+        renderEmailTemplateFromContent: jest.fn().mockResolvedValue({
+          subject: '<strong>Rendered Subject</strong>',
+          body: '<p>Rendered Body</p>',
+        }),
+      };
+      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+
+      mockGitHubGetTemplateContentByCommit
+        .mockResolvedValueOnce('<p>Body template</p>')
+        .mockResolvedValueOnce('Subject template');
+
+      const result = await fetchNotificationPreview('notif-preview');
+
+      expect(result.state).toBe('success');
+      if (result.state === 'success') {
+        expect(result.gitCommitSha).toBe('a'.repeat(40));
+        expect(result.renderedBodyHtml).toBe('<p>Rendered Body</p>');
+        expect(result.renderedSubjectHtml).toBe('<strong>Rendered Subject</strong>');
+      }
+      expect(mockGitHubGetTemplateContentByCommit).toHaveBeenCalledTimes(2);
+      expect(mockService.renderEmailTemplateFromContent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'notif-preview' }),
+        {
+          body: '<p>Body template</p>',
+          subject: 'Subject template',
+        },
+        {
+          context: { patientName: 'John' },
+        },
+      );
+    });
+
+    it('returns missing_sha when notification has no gitCommitSha', async () => {
+      const mockService = {
+        getNotification: jest.fn().mockResolvedValue(
+          createMockNotification({
+            id: 'notif-no-sha',
+            gitCommitSha: null,
+          }),
+        ),
+        getOneOffNotification: jest.fn().mockResolvedValue(null),
+        renderEmailTemplateFromContent: jest.fn(),
+      };
+      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+
+      const result = await fetchNotificationPreview('notif-no-sha');
+
+      expect(result.state).toBe('missing_sha');
+      expect(mockGitHubGetTemplateContentByCommit).not.toHaveBeenCalled();
+    });
+
+    it('returns error state when GitHub fetch fails', async () => {
+      const mockService = {
+        getNotification: jest.fn().mockResolvedValue(
+          createMockNotification({
+            id: 'notif-github-error',
+            gitCommitSha: 'b'.repeat(40),
+            bodyTemplate: 'templates/body.pug',
+          }),
+        ),
+        getOneOffNotification: jest.fn().mockResolvedValue(null),
+      };
+      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+
+      mockGitHubGetTemplateContentByCommit.mockRejectedValue(
+        new Error('GitHub API rate limit exceeded while fetching template preview.'),
+      );
+
+      const result = await fetchNotificationPreview('notif-github-error');
+
+      expect(result).toEqual({
+        state: 'error',
+        message: 'GitHub API rate limit exceeded while fetching template preview.',
       });
     });
   });

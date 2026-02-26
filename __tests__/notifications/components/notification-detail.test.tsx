@@ -31,6 +31,7 @@ const mockNotificationDetail = {
   createdAt: '2024-01-01T09:00:00Z',
   updatedAt: '2024-01-02T11:00:00Z',
   adapterUsed: 'sendgrid',
+  gitCommitSha: 'a'.repeat(40),
   bodyTemplate: '<p>Welcome to our service, {{name}}!</p>',
   subjectTemplate: 'Welcome to VintaSend',
   contextUsed: { name: 'John Doe', email: 'john@example.com' },
@@ -68,6 +69,7 @@ const mockOneOffNotificationDetail = {
   createdAt: '2024-01-05T09:00:00Z',
   updatedAt: '2024-01-05T09:00:00Z',
   adapterUsed: null,
+  gitCommitSha: null,
   bodyTemplate: 'Your verification code is: {{code}}',
   subjectTemplate: null,
   contextUsed: { code: '123456' },
@@ -199,6 +201,32 @@ describe('NotificationDetail — Phase 6', () => {
       await waitFor(() => {
         expect(screen.getByText('EMAIL')).toBeInTheDocument();
         expect(screen.getByText('SENT')).toBeInTheDocument();
+      });
+    });
+
+    it('displays git commit sha when present', async () => {
+      mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
+
+      render(
+        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Git Commit SHA')).toBeInTheDocument();
+        expect(screen.getByText('a'.repeat(40))).toBeInTheDocument();
+      });
+    });
+
+    it('shows fallback when git commit sha is missing', async () => {
+      mockFetchNotificationDetail.mockResolvedValueOnce(mockOneOffNotificationDetail);
+
+      render(
+        <NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Git Commit SHA')).toBeInTheDocument();
+        expect(screen.getAllByText('—').length).toBeGreaterThan(0);
       });
     });
 

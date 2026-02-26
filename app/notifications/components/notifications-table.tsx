@@ -55,6 +55,12 @@ interface NotificationsTableProps {
    * @param id - Notification ID
    */
   onResend?: (id: string) => void;
+
+  /**
+   * Callback fired when the "Preview render" action is clicked.
+   * @param id - Notification ID
+   */
+  onPreviewRender?: (id: string) => void;
 }
 
 /**
@@ -78,11 +84,14 @@ export function NotificationsTable({
   onPaginationChange,
   onRowClick,
   onResend,
+  onPreviewRender,
 }: NotificationsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
 
   // Create columns with action callbacks
-  const columns = (onRowClick || onResend) ? createColumns({ onViewDetails: onRowClick, onResend }) : defaultColumns;
+  const columns = (onRowClick || onResend || onPreviewRender)
+    ? createColumns({ onViewDetails: onRowClick, onResend, onPreviewRender })
+    : defaultColumns;
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({

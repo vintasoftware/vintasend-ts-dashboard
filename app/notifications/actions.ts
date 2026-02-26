@@ -18,8 +18,13 @@ import {
   serializeOneOffNotificationWithDetail,
 } from '@/lib/notifications/serialize';
 import { getVintaSendService, type VintaSendConfig } from '@/lib/notifications/get-vintasend-service';
+import { createGitHubTemplateClientFromEnv } from '@/lib/notifications/github-template-client';
 import { isOneOffNotification } from 'vintasend';
-import type { NotificationFilterFields } from 'vintasend';
+import type {
+  NotificationFilterCapabilities,
+  NotificationFilterFields,
+  StringFieldFilter,
+} from 'vintasend';
 
 /**
  * Fetches notifications with optional filtering and pagination.
@@ -33,16 +38,55 @@ import type { NotificationFilterFields } from 'vintasend';
 /**
  * Converts dashboard NotificationFilters to VintaSend's NotificationFilterFields.
  */
-function buildBackendFilter(filters: NotificationFilters): NotificationFilterFields<VintaSendConfig> {
+function buildStringFilter(
+  value: string | undefined,
+  capabilities: NotificationFilterCapabilities,
+): StringFieldFilter | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const supportsIncludes = capabilities['stringLookups.includes'];
+  const supportsCaseInsensitive = capabilities['stringLookups.caseInsensitive'];
+
+  if (supportsIncludes) {
+    return {
+      lookup: 'includes',
+      value,
+      ...(supportsCaseInsensitive ? { caseSensitive: false } : {}),
+    };
+  }
+
+  if (supportsCaseInsensitive) {
+    return {
+      lookup: 'exact',
+      value,
+      caseSensitive: false,
+    };
+  }
+
+  return value;
+}
+
+function buildBackendFilter(
+  filters: NotificationFilters,
+  capabilities: NotificationFilterCapabilities,
+): NotificationFilterFields<VintaSendConfig> {
   const filter: NotificationFilterFields<VintaSendConfig> = {};
 
   if (filters.status) filter.status = filters.status;
   if (filters.notificationType) filter.notificationType = filters.notificationType;
   if (filters.adapterUsed) filter.adapterUsed = filters.adapterUsed;
   if (filters.userId) filter.userId = filters.userId;
-  if (filters.bodyTemplate) filter.bodyTemplate = filters.bodyTemplate;
-  if (filters.subjectTemplate) filter.subjectTemplate = filters.subjectTemplate;
-  if (filters.contextName) filter.contextName = filters.contextName;
+  if (filters.bodyTemplate) {
+    filter.bodyTemplate = buildStringFilter(filters.bodyTemplate, capabilities);
+  }
+  if (filters.subjectTemplate) {
+    filter.subjectTemplate = buildStringFilter(filters.subjectTemplate, capabilities);
+  }
+  if (filters.contextName) {
+    filter.contextName = buildStringFilter(filters.contextName, capabilities);
+  }
 
   if (filters.createdAtFrom || filters.createdAtTo) {
     filter.createdAtRange = {
@@ -74,8 +118,10 @@ export async function fetchNotifications(
     // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
     const backendPage = page - 1;
 
+    const capabilities = await service.getBackendSupportedFilterCapabilities();
+
     // Build backend filter from dashboard filters and use filterNotifications
-    const backendFilter = buildBackendFilter(filters);
+    const backendFilter = buildBackendFilter(filters, capabilities);
     const dbNotifications = await service.filterNotifications(backendFilter, backendPage, pageSize);
 
     const serialized = dbNotifications.map((n) =>
@@ -135,6 +181,103 @@ export async function fetchNotificationDetail(
     throw new Error(
       `Failed to fetch notification detail: ${error instanceof Error ? error.message : 'Unknown error'}`,
     );
+  }
+}
+
+export type NotificationPreviewResult =
+  | {
+      state: 'success';
+      gitCommitSha: string;
+      bodyTemplatePath: string;
+      subjectTemplatePath: string | null;
+      renderedBodyHtml: string;
+      renderedSubjectHtml: string;
+    }
+  | {
+      state: 'missing_sha';
+      message: string;
+    }
+  | {
+      state: 'error';
+      message: string;
+    };
+
+/**
+ * Fetches template source for a notification at the commit SHA persisted with that notification.
+ * The client only provides the notification ID; GitHub access is performed server-side.
+ */
+export async function fetchNotificationPreview(
+  notificationId: string,
+): Promise<NotificationPreviewResult> {
+  try {
+    const service = await getVintaSendService();
+
+    const notification =
+      (await service.getNotification(notificationId, false))
+      ?? (await service.getOneOffNotification(notificationId, false));
+
+    if (!notification) {
+      return {
+        state: 'error',
+        message: `Notification with ID ${notificationId} not found.`,
+      };
+    }
+
+    if (!notification.gitCommitSha) {
+      return {
+        state: 'missing_sha',
+        message:
+          'This notification does not have a tracked git commit SHA, so historical preview is unavailable.',
+      };
+    }
+
+    const githubClient = createGitHubTemplateClientFromEnv();
+    const bodyTemplateContent = await githubClient.getTemplateContentByCommit({
+      templatePath: notification.bodyTemplate,
+      gitCommitSha: notification.gitCommitSha,
+    });
+
+    let subjectTemplateContent: string | null = null;
+    if (notification.subjectTemplate) {
+      subjectTemplateContent = await githubClient.getTemplateContentByCommit({
+        templatePath: notification.subjectTemplate,
+        gitCommitSha: notification.gitCommitSha,
+      });
+    }
+
+    const renderedTemplate = await service.renderEmailTemplateFromContent(
+      notification,
+      {
+        body: bodyTemplateContent,
+        subject: subjectTemplateContent,
+      },
+      notification.contextUsed
+        ? {
+            context: notification.contextUsed,
+          }
+        : {
+            contextName: notification.contextName,
+            contextParameters: notification.contextParameters,
+          },
+    );
+
+    return {
+      state: 'success',
+      gitCommitSha: notification.gitCommitSha,
+      bodyTemplatePath: notification.bodyTemplate,
+      subjectTemplatePath: notification.subjectTemplate,
+      renderedBodyHtml: renderedTemplate.body,
+      renderedSubjectHtml: renderedTemplate.subject,
+    };
+  } catch (error) {
+    console.error('Error fetching notification preview:', error);
+    return {
+      state: 'error',
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Unknown error while fetching notification preview.',
+    };
   }
 }
 

@@ -7,6 +7,7 @@ import { NotificationsFilters } from './notifications-filters';
 import { NotificationsTable } from './notifications-table';
 import { NotificationDetail } from './notification-detail';
 import { ResendNotificationDialog } from './resend-notification-dialog';
+import { PreviewRenderDialog } from './preview-render-dialog';
 import { fetchNotifications } from '../actions';
 
 interface NotificationsPageClientProps {
@@ -43,6 +44,9 @@ export function NotificationsPageClient({
   // Resend dialog state
   const [resendNotificationId, setResendNotificationId] = useState<string | null>(null);
 
+  // Preview render dialog state
+  const [previewNotificationId, setPreviewNotificationId] = useState<string | null>(null);
+
   /**
    * Handle opening the notification detail panel.
    */
@@ -69,6 +73,20 @@ export function NotificationsPageClient({
    */
   const handleResendClose = useCallback(() => {
     setResendNotificationId(null);
+  }, []);
+
+  /**
+   * Handle opening the preview render dialog.
+   */
+  const handlePreviewRenderClick = useCallback((id: string) => {
+    setPreviewNotificationId(id);
+  }, []);
+
+  /**
+   * Handle closing the preview render dialog.
+   */
+  const handlePreviewRenderClose = useCallback(() => {
+    setPreviewNotificationId(null);
   }, []);
 
   /**
@@ -184,6 +202,7 @@ export function NotificationsPageClient({
         onPaginationChange={handlePaginationChange}
         onRowClick={handleRowClick}
         onResend={handleResendClick}
+        onPreviewRender={handlePreviewRenderClick}
       />
 
       {/* Notification Detail Panel */}
@@ -197,6 +216,11 @@ export function NotificationsPageClient({
         notificationId={resendNotificationId}
         onClose={handleResendClose}
         onResent={handleResent}
+      />
+
+      <PreviewRenderDialog
+        notificationId={previewNotificationId}
+        onClose={handlePreviewRenderClose}
       />
     </div>
   );

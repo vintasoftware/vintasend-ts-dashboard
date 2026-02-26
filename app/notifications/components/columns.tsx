@@ -2,7 +2,7 @@
 
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ArrowUpDown, ChevronDown, Eye, HashIcon, RefreshCw } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, Eye, FileText, HashIcon, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +89,11 @@ export interface ColumnOptions {
    * Only shown for non-one-off notifications with status SENT or FAILED.
    */
   onResend?: (id: string) => void;
+
+  /**
+   * Callback fired when "Preview render" is clicked.
+   */
+  onPreviewRender?: (id: string) => void;
 }
 
 /**
@@ -96,7 +101,7 @@ export interface ColumnOptions {
  * Accepts options for action callbacks.
  */
 export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboardNotification>[] {
-  const { onViewDetails, onResend } = options;
+  const { onViewDetails, onResend, onPreviewRender } = options;
 
   const columns: ColumnDef<AnyDashboardNotification>[] = [
   {
@@ -154,7 +159,7 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
 
   {
     accessorKey: 'recipient',
-    header: 'Recipient',
+    header: 'Recipient ID',
     cell: ({ row }) => {
       const recipient = getRecipient(row.original);
       return (
@@ -218,6 +223,17 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
             >
               <HashIcon className="h-4 w-4 mr-2" />
               Copy ID
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreviewRender?.(row.original.id);
+              }}
+              disabled={!onPreviewRender}
+              data-testid={`preview-render-${row.original.id}`}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Preview render
             </DropdownMenuItem>
             {onResend &&
               !isOneOff(row.original) &&

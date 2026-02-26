@@ -314,6 +314,28 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
           )}
 
           <DetailField label="Adapter Used" value={notification.adapterUsed || '—'} />
+          <DetailField
+            label="Git Commit SHA"
+            value={
+              notification.gitCommitSha ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs break-all">{notification.gitCommitSha}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2"
+                    onClick={() => navigator.clipboard.writeText(notification.gitCommitSha ?? '')}
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Copy
+                  </Button>
+                </div>
+              ) : (
+                '—'
+              )
+            }
+          />
         </div>
 
         <Separator />

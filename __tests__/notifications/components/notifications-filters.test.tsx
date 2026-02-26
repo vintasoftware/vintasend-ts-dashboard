@@ -1,6 +1,6 @@
 /**
- * Tests for the NotificationsFilters component.
- * Tests filter changes, search debouncing, and form interactions.
+ * Tests for NotificationsFilters component.
+ * Validates rendered controls, initial values, debounced text filters and loading state.
  */
 
 import '@testing-library/jest-dom';
@@ -8,14 +8,20 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationsFilters } from '@/app/notifications/components/notifications-filters';
 
-describe('NotificationsFilters — Phase 3', () => {
-  describe('3.4: Filter Changes', () => {
-    it('renders all filter controls', () => {
+describe('NotificationsFilters', () => {
+  describe('rendering and initial values', () => {
+    it('renders core controls', () => {
       render(<NotificationsFilters />);
 
-      expect(screen.getByTestId('search-input')).toBeInTheDocument();
       expect(screen.getByTestId('status-select')).toBeInTheDocument();
       expect(screen.getByTestId('type-select')).toBeInTheDocument();
+      expect(screen.getByLabelText('Adapter Used')).toBeInTheDocument();
+      expect(screen.getByLabelText('Recipient ID')).toBeInTheDocument();
+      expect(screen.getByLabelText('Body Template')).toBeInTheDocument();
+      expect(screen.getByLabelText('Subject Template')).toBeInTheDocument();
+      expect(screen.getByLabelText('Context')).toBeInTheDocument();
+      expect(screen.getByText('Created At')).toBeInTheDocument();
+      expect(screen.getByText('Sent At')).toBeInTheDocument();
     });
 
     it('initializes with provided filter values', () => {
@@ -24,463 +30,121 @@ describe('NotificationsFilters — Phase 3', () => {
           initialFilters={{
             status: 'PENDING_SEND',
             notificationType: 'SMS',
-            search: 'test',
+            adapterUsed: 'sendgrid',
+            userId: 'user-123',
+            bodyTemplate: 'welcome-body',
+            subjectTemplate: 'welcome-subject',
+            contextName: 'taskAssignment',
           }}
-        />
+        />,
       );
 
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      expect(searchInput.value).toBe('test');
-    });
-
-    it('has all required filter controls', () => {
-      render(<NotificationsFilters />);
-
-      const statusSelect = screen.getByTestId('status-select');
-      const typeSelect = screen.getByTestId('type-select');
-      const searchInput = screen.getByTestId('search-input');
-
-      // Select elements and search input should be present
-      expect(statusSelect).toBeInTheDocument();
-      expect(typeSelect).toBeInTheDocument();
-      expect(searchInput).toBeInTheDocument();
+      expect(screen.getByTestId('status-select')).toHaveTextContent('PENDING_SEND');
+      expect(screen.getByTestId('type-select')).toHaveTextContent('SMS');
+      expect(screen.getByLabelText('Adapter Used')).toHaveValue('sendgrid');
+      expect(screen.getByLabelText('Recipient ID')).toHaveValue('user-123');
+      expect(screen.getByLabelText('Body Template')).toHaveValue('welcome-body');
+      expect(screen.getByLabelText('Subject Template')).toHaveValue('welcome-subject');
+      expect(screen.getByLabelText('Context')).toHaveValue('taskAssignment');
     });
   });
 
-  describe('3.6: Search Debouncing', () => {
-    it('debounces search input before calling callback', async () => {
+  describe('debounced text filters', () => {
+    it('debounces adapterUsed input and calls callback after inactivity', async () => {
       const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
+      const onFiltersChange = jest.fn();
 
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
+      render(<NotificationsFilters onFiltersChange={onFiltersChange} />);
 
-      const searchInput = screen.getByTestId('search-input');
+      const adapterInput = screen.getByLabelText('Adapter Used');
+      await user.type(adapterInput, 'sendgrid');
 
-      // Type some text
-      await user.type(searchInput, 'test');
+      expect(onFiltersChange).not.toHaveBeenCalled();
 
-      // Callback should not be called immediately
-      expect(handleFiltersChange).not.toHaveBeenCalled();
-
-      // Wait for debounce to fire (300ms)
       await waitFor(
         () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({ search: 'test' });
+          expect(onFiltersChange).toHaveBeenCalledWith({ adapterUsed: 'sendgrid' });
         },
-        { timeout: 500 }
+        { timeout: 600 },
       );
     });
 
-    it('fires callback after 300ms of inactivity', async () => {
+    it('includes existing select filters in debounced text callback', async () => {
       const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const searchInput = screen.getByTestId('search-input');
-
-      // Type characters one by one
-      await user.type(searchInput, 'test query');
-
-      // Should not have called yet (still within debounce)
-      expect(handleFiltersChange).not.toHaveBeenCalled();
-
-      // Wait for debounce to fire
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({
-            search: 'test query',
-          });
-        },
-        { timeout: 500 }
-      );
-    });
-
-    it('cancels previous debounce when typing continues', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const searchInput = screen.getByTestId('search-input');
-
-      // Type "hello"
-      await user.type(searchInput, 'hello');
-
-      // Small delay, then type " world"
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await user.type(searchInput, ' world');
-
-      // Wait for final debounce to fire
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledTimes(1);
-          expect(handleFiltersChange).toHaveBeenCalledWith({
-            search: 'hello world',
-          });
-        },
-        { timeout: 500 }
-      );
-    });
-
-    it('includes other filters in search callback', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
+      const onFiltersChange = jest.fn();
 
       render(
         <NotificationsFilters
-          onFiltersChange={handleFiltersChange}
-          initialFilters={{ status: 'SENT' }}
-        />
+          onFiltersChange={onFiltersChange}
+          initialFilters={{ status: 'SENT', notificationType: 'EMAIL' }}
+        />,
       );
 
-      const searchInput = screen.getByTestId('search-input');
-
-      await user.type(searchInput, 'test');
+      await user.type(screen.getByLabelText('Body Template'), 'welcome-body');
 
       await waitFor(
         () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({
+          expect(onFiltersChange).toHaveBeenCalledWith({
             status: 'SENT',
-            search: 'test',
+            notificationType: 'EMAIL',
+            bodyTemplate: 'welcome-body',
           });
         },
-        { timeout: 500 }
+        { timeout: 600 },
       );
     });
 
-    it('clears search while maintaining other filters', async () => {
+    it('clears a text filter while preserving other active filters', async () => {
       const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
+      const onFiltersChange = jest.fn();
 
       render(
         <NotificationsFilters
-          onFiltersChange={handleFiltersChange}
+          onFiltersChange={onFiltersChange}
           initialFilters={{
             status: 'SENT',
             notificationType: 'EMAIL',
-            search: 'test',
+            adapterUsed: 'sendgrid',
           }}
-        />
+        />,
       );
 
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-
-      // Clear the search
-      await user.clear(searchInput);
+      const adapterInput = screen.getByLabelText('Adapter Used');
+      await user.clear(adapterInput);
 
       await waitFor(
         () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({
+          expect(onFiltersChange).toHaveBeenCalledWith({
             status: 'SENT',
             notificationType: 'EMAIL',
           });
         },
-        { timeout: 500 }
+        { timeout: 600 },
       );
     });
   });
 
-  describe('Loading State', () => {
-    it('disables all inputs when isLoading=true', () => {
-      render(<NotificationsFilters isLoading={true} />);
+  describe('loading and accessibility', () => {
+    it('disables all controls when isLoading=true', () => {
+      render(<NotificationsFilters isLoading />);
 
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      const statusSelect = screen.getByTestId('status-select');
-      const typeSelect = screen.getByTestId('type-select');
-
-      expect(searchInput.disabled).toBe(true);
-      expect(statusSelect).toHaveAttribute('disabled');
-      expect(typeSelect).toHaveAttribute('disabled');
+      expect(screen.getByTestId('status-select')).toHaveAttribute('disabled');
+      expect(screen.getByTestId('type-select')).toHaveAttribute('disabled');
+      expect(screen.getByLabelText('Adapter Used')).toBeDisabled();
+      expect(screen.getByLabelText('Recipient ID')).toBeDisabled();
+      expect(screen.getByLabelText('Body Template')).toBeDisabled();
+      expect(screen.getByLabelText('Subject Template')).toBeDisabled();
+      expect(screen.getByLabelText('Context')).toBeDisabled();
     });
 
-    it('enables all inputs when isLoading=false', () => {
-      render(<NotificationsFilters isLoading={false} />);
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      const statusSelect = screen.getByTestId('status-select');
-      const typeSelect = screen.getByTestId('type-select');
-
-      expect(searchInput.disabled).toBe(false);
-      expect(statusSelect).not.toHaveAttribute('disabled');
-      expect(typeSelect).not.toHaveAttribute('disabled');
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('provides labels for all inputs', () => {
+    it('exposes descriptive placeholders for text filters', () => {
       render(<NotificationsFilters />);
 
-      expect(screen.getByLabelText('Search')).toBeInTheDocument();
-      expect(screen.getByLabelText('Status')).toBeInTheDocument();
-      expect(screen.getByLabelText('Type')).toBeInTheDocument();
-    });
-
-    it('has descriptive placeholder text', () => {
-      render(<NotificationsFilters />);
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      expect(searchInput.placeholder).toContain('Search by title');
-    });
-  });
-});
-
-
-describe('NotificationsFilters — Phase 3', () => {
-  describe('3.4: Filter Changes', () => {
-    it('renders all filter controls', () => {
-      render(<NotificationsFilters />);
-
-      expect(screen.getByTestId('search-input')).toBeInTheDocument();
-      expect(screen.getByTestId('status-select')).toBeInTheDocument();
-      expect(screen.getByTestId('type-select')).toBeInTheDocument();
-    });
-
-    it('has status select rendered', () => {
-      const handleFiltersChange = jest.fn();
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const statusSelect = screen.getByTestId('status-select');
-      expect(statusSelect).toBeInTheDocument();
-      // Verify it has proper accessibility attributes
-      expect(statusSelect).toHaveAttribute('role', 'combobox');
-    });
-
-    it('has type select rendered', () => {
-      const handleFiltersChange = jest.fn();
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const typeSelect = screen.getByTestId('type-select');
-      expect(typeSelect).toBeInTheDocument();
-      // Verify it has proper accessibility attributes
-      expect(typeSelect).toHaveAttribute('role', 'combobox');
-    });
-
-    it('displays initial filter values', () => {
-      render(
-        <NotificationsFilters
-          initialFilters={{
-            status: 'SENT',
-            notificationType: 'SMS',
-          }}
-        />
-      );
-
-      // Status select should show SENT
-      const statusSelect = screen.getByTestId('status-select');
-      expect(statusSelect).toHaveTextContent('SENT');
-
-      // Type select should show SMS
-      const typeSelect = screen.getByTestId('type-select');
-      expect(typeSelect).toHaveTextContent('SMS');
-    });
-
-    it('initializes with provided filter values', () => {
-      render(
-        <NotificationsFilters
-          initialFilters={{
-            status: 'PENDING_SEND',
-            notificationType: 'SMS',
-            search: 'test',
-          }}
-        />
-      );
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      expect(searchInput.value).toBe('test');
-    });
-  });
-
-  describe('3.6: Search Debouncing', () => {
-    it('debounces search input before calling callback', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const searchInput = screen.getByTestId('search-input');
-
-      // Type some text
-      await user.type(searchInput, 'test');
-
-      // Callback should not be called immediately
-      expect(handleFiltersChange).not.toHaveBeenCalled();
-
-      // Wait for debounce to fire (300ms)
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({ search: 'test' });
-        },
-        { timeout: 500 }
-      );
-    });
-
-    it('fires callback after 300ms of inactivity', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const searchInput = screen.getByTestId('search-input');
-
-      // Type characters one by one
-      await user.type(searchInput, 'test query');
-
-      // Should not have called yet (still within debounce)
-      expect(handleFiltersChange).not.toHaveBeenCalled();
-
-      // Wait for debounce to fire
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({
-            search: 'test query',
-          });
-        },
-        { timeout: 500 }
-      );
-    });
-
-    it('cancels previous debounce when typing continues', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(<NotificationsFilters onFiltersChange={handleFiltersChange} />);
-
-      const searchInput = screen.getByTestId('search-input');
-
-      // Type "hello"
-      await user.type(searchInput, 'hello');
-
-      // Small delay, then type " world"
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await user.type(searchInput, ' world');
-
-      // Wait for final debounce to fire
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledTimes(1);
-          expect(handleFiltersChange).toHaveBeenCalledWith({
-            search: 'hello world',
-          });
-        },
-        { timeout: 500 }
-      );
-    });
-
-    it('includes other filters in search callback', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(
-        <NotificationsFilters
-          onFiltersChange={handleFiltersChange}
-          initialFilters={{ status: 'SENT' }}
-        />
-      );
-
-      const searchInput = screen.getByTestId('search-input');
-
-      await user.type(searchInput, 'test');
-
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({
-            status: 'SENT',
-            search: 'test',
-          });
-        },
-        { timeout: 500 }
-      );
-    });
-
-    it('select inputs are accessible with labels', () => {
-      render(<NotificationsFilters />);
-
-      // Status select should have associated label
-      const statusLabel = screen.getByText('Status');
-      expect(statusLabel).toBeInTheDocument();
-      const statusSelect = screen.getByTestId('status-select');
-      expect(statusSelect).toHaveAttribute('id', 'status-filter');
-
-      // Type select should have associated label
-      const typeLabel = screen.getByText('Type');
-      expect(typeLabel).toBeInTheDocument();
-      const typeSelect = screen.getByTestId('type-select');
-      expect(typeSelect).toHaveAttribute('id', 'type-filter');
-    });
-
-    it('clears search while maintaining other filters', async () => {
-      const user = userEvent.setup();
-      const handleFiltersChange = jest.fn();
-
-      render(
-        <NotificationsFilters
-          onFiltersChange={handleFiltersChange}
-          initialFilters={{
-            status: 'SENT',
-            notificationType: 'EMAIL',
-            search: 'test',
-          }}
-        />
-      );
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-
-      // Clear the search
-      await user.clear(searchInput);
-
-      await waitFor(
-        () => {
-          expect(handleFiltersChange).toHaveBeenCalledWith({
-            status: 'SENT',
-            notificationType: 'EMAIL',
-          });
-        },
-        { timeout: 500 }
-      );
-    });
-  });
-
-  describe('Loading State', () => {
-    it('disables all inputs when isLoading=true', () => {
-      render(<NotificationsFilters isLoading={true} />);
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      const statusSelect = screen.getByTestId('status-select');
-      const typeSelect = screen.getByTestId('type-select');
-
-      expect(searchInput.disabled).toBe(true);
-      expect(statusSelect).toHaveAttribute('disabled');
-      expect(typeSelect).toHaveAttribute('disabled');
-    });
-
-    it('enables all inputs when isLoading=false', () => {
-      render(<NotificationsFilters isLoading={false} />);
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      const statusSelect = screen.getByTestId('status-select');
-      const typeSelect = screen.getByTestId('type-select');
-
-      expect(searchInput.disabled).toBe(false);
-      expect(statusSelect).not.toHaveAttribute('disabled');
-      expect(typeSelect).not.toHaveAttribute('disabled');
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('provides labels for all inputs', () => {
-      render(<NotificationsFilters />);
-
-      expect(screen.getByLabelText('Search')).toBeInTheDocument();
-      expect(screen.getByLabelText('Status')).toBeInTheDocument();
-      expect(screen.getByLabelText('Type')).toBeInTheDocument();
-    });
-
-    it('has descriptive placeholder text', () => {
-      render(<NotificationsFilters />);
-
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      expect(searchInput.placeholder).toContain('Search by title');
+      expect(screen.getByLabelText('Adapter Used')).toHaveAttribute('placeholder', 'e.g. sendgrid');
+      expect(screen.getByLabelText('Recipient ID')).toHaveAttribute('placeholder', 'Recipient ID');
+      expect(screen.getByLabelText('Body Template')).toHaveAttribute('placeholder', 'Body template name');
+      expect(screen.getByLabelText('Subject Template')).toHaveAttribute('placeholder', 'Subject template name');
+      expect(screen.getByLabelText('Context')).toHaveAttribute('placeholder', 'Context');
     });
   });
 });

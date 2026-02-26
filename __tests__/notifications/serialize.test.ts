@@ -41,6 +41,7 @@ describe('Notification Serialization — Phase 2', () => {
     sentAt: new Date('2026-02-13T10:00:00Z'),
     readAt: new Date('2026-02-13T10:05:00Z'),
     createdAt: new Date('2026-02-12T09:00:00Z'),
+    gitCommitSha: 'a'.repeat(40),
   };
 
   const mockDatabaseOneOffNotification: DatabaseOneOffNotification<VintaSendConfig> = {
@@ -70,6 +71,7 @@ describe('Notification Serialization — Phase 2', () => {
     sentAt: new Date('2026-02-13T11:00:00Z'),
     readAt: null,
     createdAt: new Date('2026-02-12T10:00:00Z'),
+    gitCommitSha: 'b'.repeat(40),
   };
 
   describe('serializeNotification', () => {
@@ -126,6 +128,8 @@ describe('Notification Serialization — Phase 2', () => {
       expect(serialized).toHaveProperty('status');
       expect(serialized).toHaveProperty('adapterUsed');
       expect(serialized).toHaveProperty('bodyTemplate');
+      expect(serialized).toHaveProperty('gitCommitSha');
+      expect(serialized.gitCommitSha).toBe('a'.repeat(40));
     });
   });
 

@@ -57,6 +57,7 @@ export type DashboardNotification = SerializeDates<
     | 'adapterUsed'
     | 'bodyTemplate'
     | 'subjectTemplate'
+    | 'gitCommitSha'
   >
 >;
 
@@ -82,6 +83,7 @@ export type DashboardOneOffNotification = SerializeDates<
     | 'adapterUsed'
     | 'bodyTemplate'
     | 'subjectTemplate'
+    | 'gitCommitSha'
   >
 >;
 

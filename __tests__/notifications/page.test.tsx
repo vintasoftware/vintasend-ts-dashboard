@@ -134,7 +134,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
       );
 
       // Filters should be present
-      expect(screen.getByTestId('search-input')).toBeInTheDocument();
+      expect(screen.getByLabelText('Adapter Used')).toBeInTheDocument();
       expect(screen.getByTestId('status-select')).toBeInTheDocument();
       expect(screen.getByTestId('type-select')).toBeInTheDocument();
     });
@@ -154,8 +154,8 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
         />,
       );
 
-      const searchInput = screen.getByTestId('search-input');
-      await userEvent.type(searchInput, 'test');
+      const adapterInput = screen.getByLabelText('Adapter Used');
+      await userEvent.type(adapterInput, 'sendgrid');
 
       // Wait for debounce (300ms)
       await waitFor(
@@ -198,8 +198,8 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
         />,
       );
 
-      const searchInput = screen.getByTestId('search-input');
-      await userEvent.type(searchInput, 'test');
+      const adapterInput = screen.getByLabelText('Adapter Used');
+      await userEvent.type(adapterInput, 'sendgrid');
 
       await waitFor(
         () => {
@@ -228,8 +228,8 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
         />,
       );
 
-      const searchInput = screen.getByTestId('search-input') as HTMLInputElement;
-      expect(searchInput.disabled).toBe(false);
+      const adapterInput = screen.getByLabelText('Adapter Used') as HTMLInputElement;
+      expect(adapterInput.disabled).toBe(false);
     });
   });
 
@@ -316,8 +316,8 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
       expect(screen.getByText('Test Notification 1')).toBeInTheDocument();
 
       // Both filters and pagination should appear in URL
-      const searchInput = screen.getByTestId('search-input');
-      await user.type(searchInput, 'test');
+      const adapterInput = screen.getByLabelText('Adapter Used');
+      await user.type(adapterInput, 'sendgrid');
 
       await waitFor(
         () => {
@@ -326,9 +326,9 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
         { timeout: 500 },
       );
 
-      // Should have both search and status in URL
+      // Should have both adapterUsed and status in URL
       expect(mockRouter.replace).toHaveBeenCalledWith(
-        expect.stringMatching(/search=.*&(page|status)/),
+        expect.stringMatching(/adapterUsed=.*&(page|status)/),
         expect.any(Object),
       );
     });

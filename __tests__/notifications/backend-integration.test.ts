@@ -100,7 +100,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       ];
 
       getVintaSendService.mockResolvedValue({
-        getNotifications: jest.fn().mockResolvedValue(mockNotifications),
+        filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
         getPendingNotifications: jest.fn(),
         getFutureNotifications: jest.fn(),
         getOneOffNotifications: jest.fn(),
@@ -121,7 +121,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       expect(result.data[0]).toHaveProperty('status');
     });
 
-    it('Test 5.2: Status filter delegates to getPendingNotifications', async () => {
+    it('Test 5.2: Status filter is passed through to filterNotifications', async () => {
       const mockPendingNotifications = [
         {
           id: 'notif-pending',
@@ -140,22 +140,26 @@ describe('Phase 5 — Backend Integration Tests', () => {
         },
       ];
 
-      const mockGetPending = jest.fn().mockResolvedValue(mockPendingNotifications);
+      const mockFilterNotifications = jest
+        .fn()
+        .mockResolvedValue(mockPendingNotifications);
 
       getVintaSendService.mockResolvedValue({
-        getPendingNotifications: mockGetPending,
-        getNotifications: jest.fn(),
+        filterNotifications: mockFilterNotifications,
       } as any);
 
       await fetchNotifications({ status: 'PENDING_SEND' }, 1, 10);
 
-      // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-      expect(mockGetPending).toHaveBeenCalledWith(0, 10);
+      expect(mockFilterNotifications).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'PENDING_SEND' }),
+        0,
+        10,
+      );
     });
 
     it('Test 5.4: Empty result returns correct shape', async () => {
       getVintaSendService.mockResolvedValue({
-        getNotifications: jest.fn().mockResolvedValue([]),
+        filterNotifications: jest.fn().mockResolvedValue([]),
         getPendingNotifications: jest.fn(),
       } as any);
 
@@ -190,7 +194,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       ];
 
       getVintaSendService.mockResolvedValue({
-        getNotifications: jest.fn().mockResolvedValue(mockNotifications),
+        filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
       } as any);
 
       const result = await fetchNotifications({}, 1, 10);
@@ -389,7 +393,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       ];
 
       getVintaSendService.mockResolvedValue({
-        getNotifications: jest.fn().mockResolvedValue(mockNotifications),
+        filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
       } as any);
 
       const result = await fetchNotifications({ notificationType: 'EMAIL' }, 1, 10);
@@ -433,7 +437,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       ];
 
       getVintaSendService.mockResolvedValue({
-        getNotifications: jest.fn().mockResolvedValue(mockNotifications),
+        filterNotifications: jest.fn().mockResolvedValue(mockNotifications),
       } as any);
 
       const result = await fetchNotifications({ search: 'important' }, 1, 10);

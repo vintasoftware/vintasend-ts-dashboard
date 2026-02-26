@@ -25,6 +25,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     readAt: '2024-01-02T11:00:00Z',
     createdAt: '2024-01-01T09:00:00Z',
     adapterUsed: 'nodemailer',
+    gitCommitSha: 'a'.repeat(40),
     bodyTemplate: '<p>Welcome!</p>',
     subjectTemplate: 'Welcome to our service',
   },
@@ -42,6 +43,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     readAt: null,
     createdAt: '2024-01-03T09:00:00Z',
     adapterUsed: 'twilio',
+    gitCommitSha: null,
     bodyTemplate: 'Your code is: 123456',
     subjectTemplate: 'Verification Code',
   },
@@ -57,6 +59,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     readAt: null,
     createdAt: '2024-01-04T09:00:00Z',
     adapterUsed: null,
+    gitCommitSha: null,
     bodyTemplate: 'Alert: Important update',
     subjectTemplate: 'Alert',
   },
@@ -334,6 +337,31 @@ describe('NotificationsTable — Phase 3', () => {
       // Skeletons should not be present
       const skeletons = container.querySelectorAll('.h-4.w-full');
       expect(skeletons).toHaveLength(0);
+    });
+  });
+
+  describe('Phase 7: Preview render action', () => {
+    it('calls onPreviewRender when clicking Preview render in the actions menu', async () => {
+      const user = userEvent.setup();
+      const handlePreviewRender = jest.fn();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={10}
+          onPreviewRender={handlePreviewRender}
+        />,
+      );
+
+      const actionButtons = screen.getAllByRole('button', { name: /open menu/i });
+      await user.click(actionButtons[0]);
+
+      const previewRenderItem = await screen.findByTestId('preview-render-1');
+      await user.click(previewRenderItem);
+
+      expect(handlePreviewRender).toHaveBeenCalledWith('1');
     });
   });
 });

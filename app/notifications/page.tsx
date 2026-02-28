@@ -61,6 +61,8 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
     createdAtTo: params.createdAtTo ? String(params.createdAtTo) : undefined,
     sentAtFrom: params.sentAtFrom ? String(params.sentAtFrom) : undefined,
     sentAtTo: params.sentAtTo ? String(params.sentAtTo) : undefined,
+    orderByField: params.orderByField ? (String(params.orderByField) as NotificationFilters['orderByField']) : undefined,
+    orderByDirection: params.orderByDirection ? (String(params.orderByDirection) as NotificationFilters['orderByDirection']) : undefined,
   };
 
   // Remove undefined values from filters object

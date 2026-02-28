@@ -170,6 +170,36 @@ describe('Phase 5 — Backend Integration Tests', () => {
         expect.objectContaining({ status: 'PENDING_SEND' }),
         0,
         10,
+        { field: 'createdAt', direction: 'desc' },
+        undefined,
+      );
+    });
+
+    it('Test: orderBy filters are passed through to filterNotifications', async () => {
+      const mockFilterNotifications = jest.fn().mockResolvedValue([]);
+
+      getVintaSendService.mockResolvedValue(createMockService({
+        getBackendSupportedFilterCapabilities: jest.fn().mockResolvedValue({
+          'orderBy.sentAt': true,
+        }),
+        filterNotifications: mockFilterNotifications,
+      }));
+
+      await fetchNotifications(
+        {
+          orderByField: 'sentAt',
+          orderByDirection: 'asc',
+        },
+        1,
+        10,
+      );
+
+      expect(mockFilterNotifications).toHaveBeenCalledWith(
+        expect.any(Object),
+        0,
+        10,
+        { field: 'sentAt', direction: 'asc' },
+        undefined,
       );
     });
 
@@ -187,6 +217,39 @@ describe('Phase 5 — Backend Integration Tests', () => {
         pageSize: 10,
         hasMore: false,
       });
+    });
+
+    it('Test: fetchNotifications routes reads to backend from optional env var', async () => {
+      const previous = process.env.VINTASEND_DASHBOARD_BACKEND_IDENTIFIER;
+      process.env.VINTASEND_DASHBOARD_BACKEND_IDENTIFIER = 'replica';
+
+      const mockGetCapabilities = jest.fn().mockResolvedValue({
+        'stringLookups.includes': true,
+        'stringLookups.caseInsensitive': true,
+      });
+      const mockFilterNotifications = jest.fn().mockResolvedValue([]);
+
+      getVintaSendService.mockResolvedValue(createMockService({
+        getBackendSupportedFilterCapabilities: mockGetCapabilities,
+        filterNotifications: mockFilterNotifications,
+      }));
+
+      await fetchNotifications({}, 1, 10);
+
+      expect(mockGetCapabilities).toHaveBeenCalledWith('replica');
+      expect(mockFilterNotifications).toHaveBeenCalledWith(
+        expect.any(Object),
+        0,
+        10,
+        { field: 'createdAt', direction: 'desc' },
+        'replica',
+      );
+
+      if (previous === undefined) {
+        delete process.env.VINTASEND_DASHBOARD_BACKEND_IDENTIFIER;
+      } else {
+        process.env.VINTASEND_DASHBOARD_BACKEND_IDENTIFIER = previous;
+      }
     });
 
     it('Test 5.5: Date serialization converts Date objects to ISO strings', async () => {
@@ -282,7 +345,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       const result = await fetchPendingNotifications(1, 10);
 
       // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-      expect(mockGetPending).toHaveBeenCalledWith(0, 10);
+      expect(mockGetPending).toHaveBeenCalledWith(0, 10, undefined);
       expect(result.data).toHaveLength(1);
       expect(result.data[0].status).toBe('PENDING_SEND');
     });
@@ -316,7 +379,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       const result = await fetchFutureNotifications(1, 10);
 
       // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-      expect(mockGetFuture).toHaveBeenCalledWith(0, 10);
+      expect(mockGetFuture).toHaveBeenCalledWith(0, 10, undefined);
       expect(result.data).toHaveLength(1);
     });
 
@@ -350,7 +413,7 @@ describe('Phase 5 — Backend Integration Tests', () => {
       const result = await fetchOneOffNotifications(1, 10);
 
       // Actions convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-      expect(mockGetOneOff).toHaveBeenCalledWith(0, 10);
+      expect(mockGetOneOff).toHaveBeenCalledWith(0, 10, undefined);
       expect(result.data).toHaveLength(1);
       expect(result.data[0]).toHaveProperty('emailOrPhone');
     });

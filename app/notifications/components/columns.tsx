@@ -117,6 +117,19 @@ export interface ColumnOptions {
   onCancel?: (id: string) => void;
 }
 
+function renderSortableHeader(label: string) {
+  return ({ column }: { column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | 'asc' | 'desc' } }) => (
+    <Button
+      variant="ghost"
+      onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+      className="h-8 -ml-3"
+    >
+      {label}
+      <ArrowUpDown className="ml-1 h-3 w-3" />
+    </Button>
+  );
+}
+
 /**
  * Creates TanStack column definitions for the notifications table.
  * Accepts options for action callbacks.
@@ -194,18 +207,27 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
 
   {
     accessorKey: 'sendAfter',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        className="h-8 -ml-3"
-      >
-        Send After
-        <ArrowUpDown className="ml-1 h-3 w-3" />
-      </Button>
-    ),
+    header: renderSortableHeader('Send After'),
     cell: ({ row }) => (
       <span className="text-xs whitespace-nowrap">{formatDate(row.original.sendAfter)}</span>
+    ),
+    size: 130,
+  },
+
+  {
+    accessorKey: 'sentAt',
+    header: renderSortableHeader('Sent At'),
+    cell: ({ row }) => (
+      <span className="text-xs whitespace-nowrap">{formatDate(row.original.sentAt)}</span>
+    ),
+    size: 130,
+  },
+
+  {
+    accessorKey: 'createdAt',
+    header: renderSortableHeader('Created At'),
+    cell: ({ row }) => (
+      <span className="text-xs whitespace-nowrap">{formatDate(row.original.createdAt)}</span>
     ),
     size: 130,
   },

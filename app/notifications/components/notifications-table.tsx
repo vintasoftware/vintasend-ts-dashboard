@@ -5,11 +5,9 @@ import type { Cell, Row, SortingState } from '@tanstack/react-table';
 import {
   flexRender,
   getCoreRowModel,
-  getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,7 +41,10 @@ interface NotificationsTableProps {
   currentPage: number;
   pageSize: number;
   isLoading?: boolean;
+  orderByField?: 'sendAfter' | 'sentAt' | 'readAt' | 'createdAt' | 'updatedAt';
+  orderByDirection?: 'asc' | 'desc';
   onPaginationChange?: (page: number) => void;
+  onSortingChange?: (sorting: SortingState) => void;
   /**
    * Callback fired when a row is clicked.
    * @param id - Notification ID
@@ -88,13 +89,28 @@ export function NotificationsTable({
   currentPage,
   pageSize,
   isLoading = false,
+  orderByField,
+  orderByDirection,
   onPaginationChange,
+  onSortingChange,
   onRowClick,
   onResend,
   onPreviewRender,
   onCancel,
 }: NotificationsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([]);
+  const sorting: SortingState = orderByField
+    ? [
+        {
+          id: orderByField,
+          desc: orderByDirection !== 'asc',
+        },
+      ]
+    : [];
+
+  const handleSortingChange = (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    const nextSorting = typeof updater === 'function' ? updater(sorting) : updater;
+    onSortingChange?.(nextSorting);
+  };
 
   // Create columns with action callbacks
   const columns = (onRowClick || onResend || onPreviewRender || onCancel)
@@ -106,14 +122,13 @@ export function NotificationsTable({
     data,
     columns,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
     manualPagination: true,
     manualFiltering: true,
     manualSorting: true,
     state: {
       sorting,
     },
-    onSortingChange: setSorting,
+    onSortingChange: handleSortingChange,
   });
 
   const rows = table.getRowModel().rows;

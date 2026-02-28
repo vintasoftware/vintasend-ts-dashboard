@@ -26,6 +26,31 @@ import type {
   StringFieldFilter,
 } from 'vintasend';
 
+type DashboardOrderByField = 'sendAfter' | 'sentAt' | 'readAt' | 'createdAt' | 'updatedAt';
+type DashboardOrderDirection = 'asc' | 'desc';
+
+function getDashboardReadBackendIdentifier(): string | undefined {
+  const backendIdentifier = process.env.VINTASEND_DASHBOARD_BACKEND_IDENTIFIER?.trim();
+  return backendIdentifier ? backendIdentifier : undefined;
+}
+
+function buildOrderBy(
+  filters: NotificationFilters,
+  capabilities: NotificationFilterCapabilities,
+): { field: DashboardOrderByField; direction: DashboardOrderDirection } | undefined {
+  const field = filters.orderByField ?? 'createdAt';
+  const direction = filters.orderByDirection ?? 'desc';
+
+  if (capabilities[`orderBy.${field}`] === false) {
+    return undefined;
+  }
+
+  return {
+    field,
+    direction,
+  };
+}
+
 /**
  * Fetches notifications with optional filtering and pagination.
  * Connects to the real VintaSend backend using filterNotifications.
@@ -114,15 +139,62 @@ export async function fetchNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
+
+    console.log('[notifications.fetch] request', {
+      page,
+      pageSize,
+      backendIdentifier,
+      orderByField: filters.orderByField,
+      orderByDirection: filters.orderByDirection,
+      filters,
+    });
 
     // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
     const backendPage = page - 1;
 
-    const capabilities = await service.getBackendSupportedFilterCapabilities();
+    const capabilities = await service.getBackendSupportedFilterCapabilities(backendIdentifier);
+
+    console.log('[notifications.fetch] capabilities sample', {
+      'orderBy.sendAfter': capabilities['orderBy.sendAfter'],
+      'orderBy.sentAt': capabilities['orderBy.sentAt'],
+      'orderBy.readAt': capabilities['orderBy.readAt'],
+      'orderBy.createdAt': capabilities['orderBy.createdAt'],
+      'orderBy.updatedAt': capabilities['orderBy.updatedAt'],
+    });
 
     // Build backend filter from dashboard filters and use filterNotifications
     const backendFilter = buildBackendFilter(filters, capabilities);
-    const dbNotifications = await service.filterNotifications(backendFilter, backendPage, pageSize);
+    const orderBy = buildOrderBy(filters, capabilities);
+
+    console.log('[notifications.fetch] computed', {
+      backendPage,
+      backendFilter,
+      orderBy,
+      orderByCapability:
+        filters.orderByField ? capabilities[`orderBy.${filters.orderByField}`] : 'default(createdAt)',
+    });
+
+    const dbNotifications = await service.filterNotifications(
+      backendFilter,
+      backendPage,
+      pageSize,
+      orderBy,
+      backendIdentifier,
+    );
+
+    console.log('[notifications.fetch] result', {
+      count: dbNotifications.length,
+      hasMore: dbNotifications.length === pageSize,
+      topOrderValues: orderBy
+        ? dbNotifications
+            .slice(0, 3)
+            .map((n) => {
+              const value = n[orderBy.field];
+              return value instanceof Date ? value.toISOString() : value;
+            })
+        : [],
+    });
 
     const serialized = dbNotifications.map((n) =>
       isOneOffNotification(n) ? serializeOneOffNotification(n) : serializeNotification(n),
@@ -155,9 +227,10 @@ export async function fetchNotificationDetail(
 ): Promise<AnyDashboardNotificationDetail> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
 
     // Try to fetch as a regular notification first
-    const notification = await service.getNotification(id, false);
+    const notification = await service.getNotification(id, false, backendIdentifier);
 
     if (notification) {
       // Serialize based on notification type
@@ -168,7 +241,7 @@ export async function fetchNotificationDetail(
     }
 
     // If not found, try as a one-off notification
-    const oneOffNotification = await service.getOneOffNotification(id, false);
+    const oneOffNotification = await service.getOneOffNotification(id, false, backendIdentifier);
 
     if (oneOffNotification) {
       return serializeOneOffNotificationWithDetail(oneOffNotification);
@@ -211,10 +284,11 @@ export async function fetchNotificationPreview(
 ): Promise<NotificationPreviewResult> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
 
     const notification =
-      (await service.getNotification(notificationId, false))
-      ?? (await service.getOneOffNotification(notificationId, false));
+      (await service.getNotification(notificationId, false, backendIdentifier))
+      ?? (await service.getOneOffNotification(notificationId, false, backendIdentifier));
 
     if (!notification) {
       return {
@@ -302,8 +376,13 @@ export async function fetchPendingNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
     // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-    const dbNotifications = await service.getPendingNotifications(page - 1, pageSize);
+    const dbNotifications = await service.getPendingNotifications(
+      page - 1,
+      pageSize,
+      backendIdentifier,
+    );
 
     const serialized = dbNotifications.map((n) =>
       isOneOffNotification(n) ? serializeOneOffNotification(n) : serializeNotification(n),
@@ -337,8 +416,9 @@ export async function fetchFutureNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
     // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-    const dbNotifications = await service.getFutureNotifications(page - 1, pageSize);
+    const dbNotifications = await service.getFutureNotifications(page - 1, pageSize, backendIdentifier);
 
     const serialized = dbNotifications.map((n) =>
       isOneOffNotification(n) ? serializeOneOffNotification(n) : serializeNotification(n),
@@ -372,8 +452,9 @@ export async function fetchOneOffNotifications(
 ): Promise<PaginatedResult<AnyDashboardNotification>> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
     // Convert from 1-indexed (dashboard) to 0-indexed (backend) pages
-    const dbNotifications = await service.getOneOffNotifications(page - 1, pageSize);
+    const dbNotifications = await service.getOneOffNotifications(page - 1, pageSize, backendIdentifier);
 
     const serialized = dbNotifications.map((n) => serializeOneOffNotification(n));
 
@@ -434,10 +515,11 @@ export async function cancelNotification(
 ): Promise<{ success: true } | { success: false; error: string }> {
   try {
     const service = await getVintaSendService();
+    const backendIdentifier = getDashboardReadBackendIdentifier();
 
     const notification =
-      (await service.getNotification(notificationId, false))
-      ?? (await service.getOneOffNotification(notificationId, false));
+      (await service.getNotification(notificationId, false, backendIdentifier))
+      ?? (await service.getOneOffNotification(notificationId, false, backendIdentifier));
 
     if (!notification) {
       return {

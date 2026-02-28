@@ -129,6 +129,8 @@ export type NotificationFilters = {
   createdAtTo?: string; // ISO date string
   sentAtFrom?: string; // ISO date string
   sentAtTo?: string; // ISO date string
+  orderByField?: 'sendAfter' | 'sentAt' | 'readAt' | 'createdAt' | 'updatedAt';
+  orderByDirection?: 'asc' | 'desc';
 };
 
 /**

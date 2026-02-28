@@ -1,5 +1,6 @@
 'use client';
 
+import type { SortingState } from '@tanstack/react-table';
 import { useCallback, useTransition, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -16,6 +17,26 @@ interface NotificationsPageClientProps {
   initialData: PaginatedResult<AnyDashboardNotification>;
   initialFilters: NotificationFilters;
   initialPage: number;
+}
+
+function buildFiltersFromParams(params: URLSearchParams): NotificationFilters {
+  return {
+    status: (params.get('status') as NotificationFilters['status']) ?? undefined,
+    notificationType:
+      (params.get('notificationType') as NotificationFilters['notificationType']) ?? undefined,
+    adapterUsed: params.get('adapterUsed') ?? undefined,
+    userId: params.get('userId') ?? undefined,
+    bodyTemplate: params.get('bodyTemplate') ?? undefined,
+    subjectTemplate: params.get('subjectTemplate') ?? undefined,
+    contextName: params.get('contextName') ?? undefined,
+    createdAtFrom: params.get('createdAtFrom') ?? undefined,
+    createdAtTo: params.get('createdAtTo') ?? undefined,
+    sentAtFrom: params.get('sentAtFrom') ?? undefined,
+    sentAtTo: params.get('sentAtTo') ?? undefined,
+    orderByField: (params.get('orderByField') as NotificationFilters['orderByField']) ?? undefined,
+    orderByDirection:
+      (params.get('orderByDirection') as NotificationFilters['orderByDirection']) ?? undefined,
+  };
 }
 
 /**
@@ -35,6 +56,10 @@ export function NotificationsPageClient({
 }: NotificationsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const currentOrderByField =
+    (searchParams.get('orderByField') as NotificationFilters['orderByField']) ?? undefined;
+  const currentOrderByDirection =
+    (searchParams.get('orderByDirection') as NotificationFilters['orderByDirection']) ?? undefined;
 
   // State management
   const [data, setData] = useState(initialData);
@@ -124,12 +149,13 @@ export function NotificationsPageClient({
     setCancelNotificationId(null);
 
     try {
-      const refreshed = await fetchNotifications(initialFilters, data.page, data.pageSize);
+      const activeFilters = buildFiltersFromParams(new URLSearchParams(searchParams));
+      const refreshed = await fetchNotifications(activeFilters, data.page, data.pageSize);
       setData(refreshed);
     } catch (error) {
       console.error('Error refreshing notifications after cancellation:', error);
     }
-  }, [initialFilters, data.page, data.pageSize]);
+  }, [searchParams, data.page, data.pageSize]);
 
   /**
    * Handle successful resend - refresh the current page data.
@@ -137,13 +163,14 @@ export function NotificationsPageClient({
   const handleResent = useCallback(() => {
     startTransition(async () => {
       try {
-        const result = await fetchNotifications(initialFilters, data.page, data.pageSize);
+        const activeFilters = buildFiltersFromParams(new URLSearchParams(searchParams));
+        const result = await fetchNotifications(activeFilters, data.page, data.pageSize);
         setData(result);
       } catch (error) {
         console.error('Error refreshing notifications after resend:', error);
       }
     });
-  }, [initialFilters, data.page, data.pageSize]);
+  }, [searchParams, data.page, data.pageSize]);
 
   /**
    * Handle filter changes from the filter component.
@@ -179,7 +206,7 @@ export function NotificationsPageClient({
           router.replace(`?${params.toString()}`, { scroll: false });
 
           // Fetch new data server-side
-          const result = await fetchNotifications(newFilters, 1, data.pageSize);
+          const result = await fetchNotifications(buildFiltersFromParams(params), 1, data.pageSize);
           setData(result);
         } catch (error) {
           console.error('Error fetching notifications:', error);
@@ -206,7 +233,7 @@ export function NotificationsPageClient({
           router.replace(`?${params.toString()}`, { scroll: false });
 
           // Re-fetch with current filters and new page
-          const result = await fetchNotifications(initialFilters, newPage, data.pageSize);
+          const result = await fetchNotifications(buildFiltersFromParams(params), newPage, data.pageSize);
           setData(result);
         } catch (error) {
           console.error('Error fetching notifications:', error);
@@ -214,7 +241,57 @@ export function NotificationsPageClient({
         }
       });
     },
-    [searchParams, initialFilters, data.pageSize, router],
+    [searchParams, data.pageSize, router],
+  );
+
+  const handleSortingChange = useCallback(
+    (sorting: SortingState) => {
+      startTransition(async () => {
+        try {
+          const params = new URLSearchParams(searchParams);
+          const firstSort = sorting[0];
+
+          console.log('[notifications.ui] sorting change', {
+            sorting,
+            firstSort,
+          });
+
+          const sortableFields: NonNullable<NotificationFilters['orderByField']>[] = [
+            'sendAfter',
+            'sentAt',
+            'readAt',
+            'createdAt',
+            'updatedAt',
+          ];
+
+          if (firstSort && sortableFields.includes(firstSort.id as NonNullable<NotificationFilters['orderByField']>)) {
+            params.set('orderByField', firstSort.id);
+            params.set('orderByDirection', firstSort.desc ? 'desc' : 'asc');
+          } else {
+            params.delete('orderByField');
+            params.delete('orderByDirection');
+          }
+
+          params.set('page', '1');
+
+          router.replace(`?${params.toString()}`, { scroll: false });
+
+          const nextFilters = buildFiltersFromParams(params);
+          console.log('[notifications.ui] fetch after sorting', {
+            page: 1,
+            pageSize: data.pageSize,
+            nextFilters,
+          });
+
+          const result = await fetchNotifications(nextFilters, 1, data.pageSize);
+          setData(result);
+        } catch (error) {
+          console.error('Error fetching notifications with sorting:', error);
+          throw error;
+        }
+      });
+    },
+    [searchParams, data.pageSize, router],
   );
 
   return (
@@ -241,7 +318,10 @@ export function NotificationsPageClient({
         currentPage={data.page}
         pageSize={data.pageSize}
         isLoading={isPending}
+        orderByField={currentOrderByField}
+        orderByDirection={currentOrderByDirection}
         onPaginationChange={handlePaginationChange}
+        onSortingChange={handleSortingChange}
         onRowClick={handleRowClick}
         onResend={handleResendClick}
         onPreviewRender={handlePreviewRenderClick}

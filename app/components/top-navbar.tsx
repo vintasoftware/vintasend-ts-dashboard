@@ -78,30 +78,6 @@ export function TopNavbar() {
 
             <DropdownMenuSeparator />
 
-            {/* Account Settings */}
-            <DropdownMenuItem asChild>
-              <Link
-                href="/account"
-                className="cursor-pointer flex items-center gap-2"
-              >
-                <Settings className="w-4 h-4" />
-                <span>Account Settings</span>
-              </Link>
-            </DropdownMenuItem>
-
-            {/* Profile */}
-            <DropdownMenuItem asChild>
-              <Link
-                href="/profile"
-                className="cursor-pointer flex items-center gap-2"
-              >
-                <User className="w-4 h-4" />
-                <span>Profile</span>
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuSeparator />
-
             {/* Logout */}
             <DropdownMenuItem asChild>
               <a

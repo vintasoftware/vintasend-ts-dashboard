@@ -6,24 +6,17 @@
 import type {
   DatabaseNotification,
   DatabaseOneOffNotification,
-} from 'vintasend';
-
-import type {
   NotificationStatus,
-} from 'vintasend/dist/types/notification-status';
-import type {
   NotificationType,
-} from 'vintasend/dist/types/notification-type';
+} from 'vintasend';
 import type { VintaSendConfig } from './get-vintasend-service';
-
-export type {
-  JsonValue,
-} from 'vintasend/dist/types/json-values';
 
 // Re-export core types from vintasend
 export type {
   AnyDatabaseNotification,
+  JsonValue,
 } from 'vintasend';
+
 
 /**
  * Helper type: converts Date fields to ISO string representations.

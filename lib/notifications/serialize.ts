@@ -6,7 +6,6 @@
 import type {
   DatabaseNotification,
   DatabaseOneOffNotification,
-  BaseNotificationTypeConfig,
 } from 'vintasend';
 
 import type {

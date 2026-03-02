@@ -20,8 +20,8 @@ import type {
   DashboardNotification,
   DashboardOneOffNotification,
 } from '@/lib/notifications/types';
-import type { NotificationStatus } from 'vintasend/dist/types/notification-status';
-import type { NotificationType } from 'vintasend/dist/types/notification-type';
+import type { NotificationStatus, NotificationType } from 'vintasend';
+
 /**
  * Maps notification status to badge variant colors.
  */

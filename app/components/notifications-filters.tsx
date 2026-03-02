@@ -17,8 +17,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { NotificationFilters } from '@/lib/notifications/types';
-import type { NotificationStatus } from 'vintasend/dist/types/notification-status';
-import type { NotificationType } from 'vintasend/dist/types/notification-type';
+import type { NotificationStatus, NotificationType } from 'vintasend';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { type DateRange } from 'react-day-picker';

@@ -20,8 +20,7 @@ import type {
   DashboardNotificationDetail,
   DashboardOneOffNotificationDetail,
 } from '@/lib/notifications/types';
-import type { NotificationStatus } from 'vintasend/dist/types/notification-status';
-import type { NotificationType } from 'vintasend/dist/types/notification-type';
+import type { NotificationStatus, NotificationType } from 'vintasend';
 import { fetchNotificationDetail } from '../actions';
 
 /**

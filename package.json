@@ -26,9 +26,10 @@
     "react-dom": "19.2.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "vintasend": "^0.11.0",
-    "vintasend-mailgun": "^0.11.0",
-    "vintasend-medplum": "^0.11.0"
+    "vintasend": "^0.13.2",
+    "vintasend-mailgun": "^0.13.2",
+    "vintasend-medplum": "^0.13.2",
+    "vintasend-pug": "^0.13.2"
   },
   "devDependencies": {
     "@medplum/core": "5.1.1",

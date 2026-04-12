@@ -37,6 +37,7 @@ export function serializeNotification(notification: DatabaseNotification<VintaSe
     bodyTemplate: notification.bodyTemplate,
     subjectTemplate: notification.subjectTemplate,
     gitCommitSha: notification.gitCommitSha,
+    tenant: notification.tenant,
   };
 }
 
@@ -79,6 +80,7 @@ export function serializeOneOffNotification(
     bodyTemplate: notification.bodyTemplate,
     subjectTemplate: notification.subjectTemplate,
     gitCommitSha: notification.gitCommitSha,
+    tenant: notification.tenant,
   };
 }
 

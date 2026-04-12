@@ -28,6 +28,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     gitCommitSha: 'a'.repeat(40),
     bodyTemplate: '<p>Welcome!</p>',
     subjectTemplate: 'Welcome to our service',
+    tenant: null,
   },
   {
     id: '2',
@@ -46,6 +47,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     gitCommitSha: null,
     bodyTemplate: 'Your code is: 123456',
     subjectTemplate: 'Verification Code',
+    tenant: null,
   },
   {
     id: '3',
@@ -62,6 +64,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     gitCommitSha: null,
     bodyTemplate: 'Alert: Important update',
     subjectTemplate: 'Alert',
+    tenant: null,
   },
 ];
 

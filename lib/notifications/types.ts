@@ -51,6 +51,7 @@ export type DashboardNotification = SerializeDates<
     | 'bodyTemplate'
     | 'subjectTemplate'
     | 'gitCommitSha'
+    | 'tenant'
   >
 >;
 
@@ -77,6 +78,7 @@ export type DashboardOneOffNotification = SerializeDates<
     | 'bodyTemplate'
     | 'subjectTemplate'
     | 'gitCommitSha'
+    | 'tenant'
   >
 >;
 
@@ -118,6 +120,7 @@ export type NotificationFilters = {
   bodyTemplate?: string;
   subjectTemplate?: string;
   contextName?: string;
+  tenant?: string;
   createdAtFrom?: string; // ISO date string
   createdAtTo?: string; // ISO date string
   sentAtFrom?: string; // ISO date string

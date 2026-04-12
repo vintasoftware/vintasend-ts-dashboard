@@ -43,6 +43,8 @@ function createMockNotification(id: string, overrides = {}): AnyDashboardNotific
     readAt: null,
     createdAt: new Date().toISOString(),
     adapterUsed: 'nodemailer',
+    gitCommitSha: null,
+    tenant: null,
     bodyTemplate: 'Body template',
     subjectTemplate: 'Subject',
     ...overrides,

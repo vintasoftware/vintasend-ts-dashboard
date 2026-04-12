@@ -42,6 +42,7 @@ function collectFilters({
   bodyTemplate,
   subjectTemplate,
   contextName,
+  tenant,
   createdAtRange,
   sentAtRange,
 }: {
@@ -52,6 +53,7 @@ function collectFilters({
   bodyTemplate: string;
   subjectTemplate: string;
   contextName: string;
+  tenant: string;
   createdAtRange: DateRange | undefined;
   sentAtRange: DateRange | undefined;
 }): NotificationFilters {
@@ -63,6 +65,7 @@ function collectFilters({
   if (bodyTemplate) filters.bodyTemplate = bodyTemplate;
   if (subjectTemplate) filters.subjectTemplate = subjectTemplate;
   if (contextName) filters.contextName = contextName;
+  if (tenant) filters.tenant = tenant;
   if (createdAtRange?.from) filters.createdAtFrom = createdAtRange.from.toISOString();
   if (createdAtRange?.to) filters.createdAtTo = createdAtRange.to.toISOString();
   if (sentAtRange?.from) filters.sentAtFrom = sentAtRange.from.toISOString();
@@ -88,6 +91,7 @@ export function NotificationsFilters({
   const [bodyTemplate, setBodyTemplate] = useState<string>(initialFilters?.bodyTemplate ?? '');
   const [subjectTemplate, setSubjectTemplate] = useState<string>(initialFilters?.subjectTemplate ?? '');
   const [contextName, setContextName] = useState<string>(initialFilters?.contextName ?? '');
+  const [tenant, setTenant] = useState<string>(initialFilters?.tenant ?? '');
   const [createdAtRange, setCreatedAtRange] = useState<DateRange | undefined>(() => {
     if (!initialFilters?.createdAtFrom && !initialFilters?.createdAtTo) return undefined;
     return {
@@ -129,13 +133,14 @@ export function NotificationsFilters({
           bodyTemplate,
           subjectTemplate,
           contextName,
+          tenant,
           createdAtRange,
           sentAtRange,
           ...overrides,
         }),
       );
     },
-    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, createdAtRange, sentAtRange, onFiltersChange],
+    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, onFiltersChange],
   );
 
   /**
@@ -154,6 +159,7 @@ export function NotificationsFilters({
             bodyTemplate,
             subjectTemplate,
             contextName,
+            tenant,
             createdAtRange,
             sentAtRange,
             ...overrides,
@@ -161,7 +167,7 @@ export function NotificationsFilters({
         );
       }, 300);
     },
-    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, createdAtRange, sentAtRange, onFiltersChange],
+    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, onFiltersChange],
   );
 
   const handleTextChange = (setter: (v: string) => void, key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -291,6 +297,19 @@ export function NotificationsFilters({
             placeholder="Context"
             value={contextName}
             onChange={handleTextChange(setContextName, 'contextName')}
+            disabled={isLoading}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <label htmlFor="tenant-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+            Tenant
+          </label>
+          <Input
+            id="tenant-filter"
+            placeholder="Tenant"
+            value={tenant}
+            onChange={handleTextChange(setTenant, 'tenant')}
             disabled={isLoading}
           />
         </div>

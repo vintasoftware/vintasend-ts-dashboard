@@ -192,6 +192,17 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboa
   },
 
   {
+    accessorKey: 'tenant',
+    header: 'Tenant',
+    cell: ({ row }) => (
+      <span className="truncate block max-w-[7rem]" title={row.original.tenant || undefined}>
+        {row.original.tenant || '—'}
+      </span>
+    ),
+    size: 100,
+  },
+
+  {
     accessorKey: 'recipient',
     header: 'Recipient ID',
     cell: ({ row }) => {

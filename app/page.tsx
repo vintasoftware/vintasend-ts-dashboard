@@ -57,6 +57,7 @@ export default async function NotificationsPage({ searchParams }: PageProps) {
     bodyTemplate: params.bodyTemplate ? String(params.bodyTemplate) : undefined,
     subjectTemplate: params.subjectTemplate ? String(params.subjectTemplate) : undefined,
     contextName: params.contextName ? String(params.contextName) : undefined,
+    tenant: params.tenant ? String(params.tenant) : undefined,
     createdAtFrom: params.createdAtFrom ? String(params.createdAtFrom) : undefined,
     createdAtTo: params.createdAtTo ? String(params.createdAtTo) : undefined,
     sentAtFrom: params.sentAtFrom ? String(params.sentAtFrom) : undefined,

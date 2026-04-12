@@ -112,6 +112,7 @@ function buildBackendFilter(
   if (filters.contextName) {
     filter.contextName = buildStringFilter(filters.contextName, capabilities);
   }
+  if (filters.tenant) filter.tenant = filters.tenant;
 
   if (filters.createdAtFrom || filters.createdAtTo) {
     filter.createdAtRange = {

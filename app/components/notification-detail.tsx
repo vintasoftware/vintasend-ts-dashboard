@@ -312,6 +312,7 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
             />
           )}
 
+          <DetailField label="Tenant" value={notification.tenant || '—'} />
           <DetailField label="Adapter Used" value={notification.adapterUsed || '—'} />
           <DetailField
             label="Git Commit SHA"

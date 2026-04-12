@@ -29,6 +29,7 @@ function buildFiltersFromParams(params: URLSearchParams): NotificationFilters {
     bodyTemplate: params.get('bodyTemplate') ?? undefined,
     subjectTemplate: params.get('subjectTemplate') ?? undefined,
     contextName: params.get('contextName') ?? undefined,
+    tenant: params.get('tenant') ?? undefined,
     createdAtFrom: params.get('createdAtFrom') ?? undefined,
     createdAtTo: params.get('createdAtTo') ?? undefined,
     sentAtFrom: params.get('sentAtFrom') ?? undefined,
@@ -187,7 +188,7 @@ export function NotificationsPageClient({
           // Sync all filter fields to URL search params
           const filterKeys: (keyof NotificationFilters)[] = [
             'status', 'notificationType', 'adapterUsed', 'userId',
-            'bodyTemplate', 'subjectTemplate', 'contextName',
+            'bodyTemplate', 'subjectTemplate', 'contextName', 'tenant',
             'createdAtFrom', 'createdAtTo', 'sentAtFrom', 'sentAtTo',
           ];
           for (const key of filterKeys) {

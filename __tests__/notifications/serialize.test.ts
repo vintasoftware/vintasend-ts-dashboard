@@ -37,6 +37,7 @@ describe('Notification Serialization — Phase 2', () => {
       attachmentCount: 0
     },
     extraParams: { campaignId: 'camp-123' },
+    tenant: null,
     adapterUsed: 'nodemailer',
     sentAt: new Date('2026-02-13T10:00:00Z'),
     readAt: new Date('2026-02-13T10:05:00Z'),
@@ -67,6 +68,7 @@ describe('Notification Serialization — Phase 2', () => {
       attachmentCount: 0
     },
     extraParams: { source: 'api' },
+    tenant: null,
     adapterUsed: 'sendgrid',
     sentAt: new Date('2026-02-13T11:00:00Z'),
     readAt: null,

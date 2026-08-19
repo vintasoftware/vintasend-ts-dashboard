@@ -1,7 +1,8 @@
 # VintaSend Dashboard
 
 Next.js dashboard for browsing, previewing, resending and cancelling
-[VintaSend](https://github.com/vintasoftware/vintasend-ts) notifications, with
+[VintaSend](https://github.com/vintasoftware/vintasend) and 
+[VintaSend-TS](https://github.com/vintasoftware/vintasend-ts) notifications, with
 pluggable authentication (Clerk or Auth0) selected via environment variables.
 
 The dashboard is a **pure client of the
@@ -43,7 +44,8 @@ VINTASEND_API_KEY=the-same-key-the-api-was-started-with
 ```
 
 If you do not have an API running yet, follow the setup in
-[vintasend-ts-api](https://github.com/vintasoftware/vintasend-ts-api) — that is
+[vintasend-ts-api](https://github.com/vintasoftware/vintasend-ts-api) or 
+[vintasend-api](https://github.com/vintasoftware/vintasend-api) — that is
 where you configure which VintaSend backend, adapters and template renderer to
 use, along with the GitHub credentials used for template previews.
 

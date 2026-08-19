@@ -12,9 +12,9 @@ import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter, useSearchParams } from 'next/navigation';
-import type { AnyDashboardNotification, PaginatedResult } from '@/lib/notifications/types';
-import { NotificationsPageClient } from '@/app/notifications/components/notifications-page-client';
-import * as actions from '@/app/notifications/actions';
+import type { Notification, PaginatedResponse } from '@/lib/notifications/types';
+import { NotificationsPageClient } from '@/app/components/notifications-page-client';
+import * as actions from '@/app/actions';
 
 // Mock the next/navigation module
 jest.mock('next/navigation', () => ({
@@ -23,15 +23,16 @@ jest.mock('next/navigation', () => ({
 }));
 
 // Mock the server action
-jest.mock('@/app/notifications/actions', () => ({
+jest.mock('@/app/actions', () => ({
   fetchNotifications: jest.fn(),
 }));
 
 /**
  * Helper: Creates mock notification data for testing
  */
-function createMockNotification(id: string, overrides = {}): AnyDashboardNotification {
+function createMockNotification(id: string, overrides = {}): Notification {
   return {
+    kind: 'user',
     id,
     userId: `user-${id}`,
     notificationType: 'EMAIL',
@@ -42,6 +43,7 @@ function createMockNotification(id: string, overrides = {}): AnyDashboardNotific
     sentAt: new Date().toISOString(),
     readAt: null,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     adapterUsed: 'nodemailer',
     gitCommitSha: null,
     tenant: null,
@@ -54,10 +56,10 @@ function createMockNotification(id: string, overrides = {}): AnyDashboardNotific
 /**
  * Helper: Creates mock paginated result
  */
-function createMockPaginatedResult(
-  items: AnyDashboardNotification[],
+function createMockPaginatedResponse(
+  items: Notification[],
   hasMore: boolean = false,
-): PaginatedResult<AnyDashboardNotification> {
+): PaginatedResponse<Notification> {
   return {
     data: items,
     page: 1,
@@ -81,13 +83,13 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     (useSearchParams as jest.Mock).mockReturnValue(mockUseSearchParams());
 
     (actions.fetchNotifications as jest.Mock).mockResolvedValue(
-      createMockPaginatedResult([createMockNotification('1')]),
+      createMockPaginatedResponse([createMockNotification('1')]),
     );
   });
 
   describe('Test 4.1 — SSR Initial Render', () => {
     it('should render table with initial data from SSR', () => {
-      const initialData = createMockPaginatedResult([
+      const initialData = createMockPaginatedResponse([
         createMockNotification('1'),
         createMockNotification('2'),
         createMockNotification('3'),
@@ -106,7 +108,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     });
 
     it('should display notification count info', () => {
-      const initialData = createMockPaginatedResult(
+      const initialData = createMockPaginatedResponse(
         Array.from({ length: 20 }, (_, i) => createMockNotification(String(i + 1))),
         true,
       );
@@ -124,7 +126,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     });
 
     it('should render filter controls with initial filter values', () => {
-      const initialData = createMockPaginatedResult([createMockNotification('1')]);
+      const initialData = createMockPaginatedResponse([createMockNotification('1')]);
       const initialFilters = { status: 'SENT' as const };
 
       render(
@@ -144,7 +146,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
 
   describe('Test 4.2 — URL Search Params Sync', () => {
     it('should call router.replace when filters change', async () => {
-      const initialData = createMockPaginatedResult([createMockNotification('1')]);
+      const initialData = createMockPaginatedResponse([createMockNotification('1')]);
       const mockFetchNotifications = actions.fetchNotifications as jest.Mock;
       mockFetchNotifications.mockResolvedValue(initialData);
 
@@ -172,7 +174,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     });
 
     it('should not reload page when filters change', () => {
-      const initialData = createMockPaginatedResult([createMockNotification('1')]);
+      const initialData = createMockPaginatedResponse([createMockNotification('1')]);
 
       const { container } = render(
         <NotificationsPageClient
@@ -188,7 +190,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     });
 
     it('should reset to page 1 when filters change', async () => {
-      const initialData = createMockPaginatedResult([createMockNotification('1')]);
+      const initialData = createMockPaginatedResponse([createMockNotification('1')]);
       const mockFetchNotifications = actions.fetchNotifications as jest.Mock;
       mockFetchNotifications.mockResolvedValue(initialData);
 
@@ -220,7 +222,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
 
   describe('Test 4.3 — Loading States', () => {
     it('should enable controls when not loading', () => {
-      const initialData = createMockPaginatedResult([createMockNotification('1')]);
+      const initialData = createMockPaginatedResponse([createMockNotification('1')]);
 
       render(
         <NotificationsPageClient
@@ -238,7 +240,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
   describe('Test 4.4 — Error Handling', () => {
     it('should show error when server action throws', async () => {
       const user = userEvent.setup();
-      const initialData = createMockPaginatedResult([createMockNotification('1')]);
+      const initialData = createMockPaginatedResponse([createMockNotification('1')]);
       const mockFetchNotifications = actions.fetchNotifications as jest.Mock;
       mockFetchNotifications.mockRejectedValue(new Error('Network error'));
 
@@ -258,7 +260,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
 
   describe('Test 4.5 — Pagination', () => {
     it('should accept hasMore and currentPage props', () => {
-      const initialData = createMockPaginatedResult(
+      const initialData = createMockPaginatedResponse(
         Array.from({ length: 20 }, (_, i) => createMockNotification(String(i + 1))),
         true,
       );
@@ -276,7 +278,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
     });
 
     it('should have pagination controls when data exists', () => {
-      const initialData = createMockPaginatedResult(
+      const initialData = createMockPaginatedResponse(
         Array.from({ length: 20 }, (_, i) => createMockNotification(String(i + 1))),
         true,
       );
@@ -297,7 +299,7 @@ describe('Phase 4 — Notifications Page Integration Tests', () => {
   describe('Test 4.6 — Combined Filters + Pagination', () => {
     it('should combine filters and pagination correctly', async () => {
       const user = userEvent.setup();
-      const initialData = createMockPaginatedResult(
+      const initialData = createMockPaginatedResponse(
         Array.from({ length: 20 }, (_, i) =>
           createMockNotification(String(i + 1), { status: 'SENT' }),
         ),

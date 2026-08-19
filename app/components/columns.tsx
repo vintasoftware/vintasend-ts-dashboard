@@ -16,11 +16,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type {
-  AnyDashboardNotification,
-  DashboardNotification,
-  DashboardOneOffNotification,
+  Notification,
+  NotificationStatus,
+  NotificationType,
+  OneOffNotification,
 } from '@/lib/notifications/types';
-import type { NotificationStatus, NotificationType } from 'vintasend';
 
 /**
  * Maps notification status to badge variant colors.
@@ -59,24 +59,19 @@ function formatDate(dateString: string | null | undefined): string {
 /**
  * Determines if a notification is one-off or regular.
  */
-function isOneOff(notification: AnyDashboardNotification): notification is DashboardOneOffNotification {
-  return 'emailOrPhone' in notification;
+function isOneOff(notification: Notification): notification is OneOffNotification {
+  return notification.kind === 'one-off';
 }
 
 /**
  * Gets the recipient identifier for display.
  */
-function getRecipient(notification: AnyDashboardNotification): string {
-  if (isOneOff(notification)) {
-    return notification.emailOrPhone || '—';
-  }
-  // For regular notifications, access userId (DashboardNotification has userId field)
-  const regularNotification = notification as DashboardNotification;
-  return regularNotification.userId || '—';
+function getRecipient(notification: Notification): string {
+  return (isOneOff(notification) ? notification.emailOrPhone : notification.userId) || '—';
 }
 
 function canPreviewRender(
-  notification: AnyDashboardNotification,
+  notification: Notification,
   onPreviewRender?: (id: string) => void,
 ): boolean {
   if (!onPreviewRender) {
@@ -134,10 +129,10 @@ function renderSortableHeader(label: string) {
  * Creates TanStack column definitions for the notifications table.
  * Accepts options for action callbacks.
  */
-export function createColumns(options: ColumnOptions = {}): ColumnDef<AnyDashboardNotification>[] {
+export function createColumns(options: ColumnOptions = {}): ColumnDef<Notification>[] {
   const { onViewDetails, onResend, onPreviewRender, onCancel } = options;
 
-  const columns: ColumnDef<AnyDashboardNotification>[] = [
+  const columns: ColumnDef<Notification>[] = [
   {
     accessorKey: 'id',
     header: 'ID',

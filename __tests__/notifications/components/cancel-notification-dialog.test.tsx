@@ -2,7 +2,7 @@ import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { CancelNotificationDialog } from '@/app/notifications/components/cancel-notification-dialog';
+import { CancelNotificationDialog } from '@/app/components/cancel-notification-dialog';
 
 describe('CancelNotificationDialog', () => {
   it('does not call onConfirm before user confirmation', () => {

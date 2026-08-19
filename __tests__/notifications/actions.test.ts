@@ -1,464 +1,216 @@
 /**
- * Tests for notification server actions.
- * Ensures the server actions return correctly shaped data and handle filters.
+ * Tests for the notification server actions.
+ *
+ * The actions are a thin layer over the API client, so these cover the layer's
+ * own behaviour: error wrapping for read actions, and the result objects the
+ * dialogs branch on.
  */
 
-// Mock the get-vintasend-service module to avoid ES module import issues with dependencies
-jest.mock('@/lib/notifications/get-vintasend-service', () => ({
-  getVintaSendService: jest.fn().mockResolvedValue({
-    getNotifications: jest.fn().mockResolvedValue([]),
-    getBackendSupportedFilterCapabilities: jest.fn().mockResolvedValue({
-      'stringLookups.includes': true,
-      'stringLookups.caseInsensitive': true,
-    }),
-    filterNotifications: jest.fn().mockResolvedValue([]),
-    getPendingNotifications: jest.fn().mockResolvedValue([]),
-    getFutureNotifications: jest.fn().mockResolvedValue([]),
-    getOneOffNotifications: jest.fn().mockResolvedValue([]),
-    getNotification: jest.fn().mockResolvedValue(null),
-    getOneOffNotification: jest.fn().mockResolvedValue(null),
-    renderEmailTemplateFromContent: jest.fn(),
-    cancelNotification: jest.fn().mockResolvedValue(undefined),
-  }),
-  validateBackendConfig: jest.fn().mockResolvedValue([]),
+jest.mock('@/lib/api/notifications', () => ({
+  listNotifications: jest.fn(),
+  listPendingNotifications: jest.fn(),
+  listFutureNotifications: jest.fn(),
+  listOneOffNotifications: jest.fn(),
+  getNotification: jest.fn(),
+  getNotificationPreview: jest.fn(),
+  resendNotification: jest.fn(),
+  cancelNotification: jest.fn(),
 }));
 
-const mockGitHubGetTemplateContentByCommit = jest.fn();
-const mockGitHubGetLatestMainCommitSha = jest.fn();
-
-jest.mock('@/lib/notifications/github-template-client', () => ({
-  createGitHubTemplateClientFromEnv: jest.fn(() => ({
-    getTemplateContentByCommit: mockGitHubGetTemplateContentByCommit,
-    getLatestMainCommitSha: mockGitHubGetLatestMainCommitSha,
-  })),
-}));
-
+import { VintaSendApiError } from '@/lib/api/client';
+import * as api from '@/lib/api/notifications';
 import {
   cancelNotification,
-  fetchNotifications,
-  fetchNotificationDetail,
-  fetchPendingNotifications,
   fetchFutureNotifications,
-  fetchOneOffNotifications,
+  fetchNotificationDetail,
   fetchNotificationPreview,
-} from '@/app/notifications/actions';
-import type {
-  AnyDashboardNotification,
-} from '@/lib/notifications/types';
+  fetchNotifications,
+  fetchOneOffNotifications,
+  fetchPendingNotifications,
+  resendNotification,
+} from '@/app/actions';
+import type { Notification, PaginatedResponse } from '@/lib/notifications/types';
 
-// Import the mocked functions
-const { getVintaSendService } = jest.requireMock('@/lib/notifications/get-vintasend-service');
+const mockedApi = api as jest.Mocked<typeof api>;
 
-// Create mock notification data for testing
-const createMockNotification = (overrides = {}) => ({
-  id: 'notif-1',
-  userId: 'user-1',
-  notificationType: 'EMAIL' as const,
-  title: 'Test Notification',
-  contextName: 'testContext',
-  status: 'SENT' as const,
-  sendAfter: null,
-  sentAt: new Date('2024-01-15T10:00:00Z'),
-  readAt: null,
-  createdAt: new Date('2024-01-15T09:00:00Z'),
-  adapterUsed: 'sendgrid',
-  bodyTemplate: 'Test body',
-  subjectTemplate: 'Test subject',
-  contextUsed: { key: 'value' },
-  contextParameters: { param: 'test' },
-  extraParams: null,
-  attachments: [],
-  ...overrides,
+function makeNotification(overrides: Partial<Notification> = {}): Notification {
+  return {
+    kind: 'user',
+    id: 'notif-1',
+    userId: 'user-1',
+    notificationType: 'EMAIL',
+    title: 'Test Notification',
+    contextName: 'taskAssignment',
+    status: 'SENT',
+    sendAfter: null,
+    sentAt: '2024-01-15T10:00:00.000Z',
+    readAt: null,
+    createdAt: '2024-01-15T09:00:00.000Z',
+    updatedAt: '2024-01-15T09:30:00.000Z',
+    adapterUsed: 'mailgun',
+    bodyTemplate: 'emails/body.pug',
+    subjectTemplate: 'emails/subject.pug',
+    gitCommitSha: 'abc123',
+    tenant: null,
+    ...overrides,
+  } as Notification;
+}
+
+function makePage(data: Notification[]): PaginatedResponse<Notification> {
+  return { data, page: 1, pageSize: 20, hasMore: false };
+}
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  jest.spyOn(console, 'error').mockImplementation(() => undefined);
 });
 
-describe('Notification Server Actions — Phase 2', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    mockGitHubGetTemplateContentByCommit.mockReset();
-    mockGitHubGetLatestMainCommitSha.mockReset();
-    const mockFilteredNotifications = [
-      createMockNotification({ id: 'notif-1', status: 'SENT' }),
-      createMockNotification({ id: 'notif-2', status: 'PENDING_SEND', notificationType: 'SMS' }),
-      createMockNotification({ id: 'notif-3', status: 'SENT', notificationType: 'EMAIL' }),
-    ];
+describe('fetchNotifications', () => {
+  it('passes filters and pagination through to the API', async () => {
+    mockedApi.listNotifications.mockResolvedValue(makePage([makeNotification()]));
 
-    // Setup default mock responses
-    const mockService = {
-      getNotifications: jest.fn().mockResolvedValue(mockFilteredNotifications),
-      getBackendSupportedFilterCapabilities: jest.fn().mockResolvedValue({
-        'stringLookups.includes': true,
-        'stringLookups.caseInsensitive': true,
-      }),
-      filterNotifications: jest.fn().mockImplementation((filter) => {
-        if (filter?.status === 'PENDING_SEND') {
-          return Promise.resolve(
-            // @ts-expect-error: TypeScript may complain about the shape of the filter object, but we're just simulating behavior here
-            mockFilteredNotifications.filter((notification) => notification.status === 'PENDING_SEND'),
-          );
-        }
+    const result = await fetchNotifications({ status: 'SENT' }, 2, 50);
 
-        return Promise.resolve(mockFilteredNotifications);
-      }),
-      getPendingNotifications: jest.fn().mockResolvedValue([
-        createMockNotification({ id: 'notif-2', status: 'PENDING_SEND' }),
-      ]),
-      getFutureNotifications: jest.fn().mockResolvedValue([
-        createMockNotification({ id: 'notif-4', sendAfter: new Date('2030-01-01T00:00:00Z') }),
-      ]),
-      getOneOffNotifications: jest.fn().mockResolvedValue([
-        {
-          ...createMockNotification({ id: 'oneoff-1' }),
-          emailOrPhone: 'test@example.com',
-          firstName: 'John',
-          lastName: 'Doe',
-        },
-      ]),
-      getNotification: jest.fn().mockResolvedValue(createMockNotification()),
-      getOneOffNotification: jest.fn().mockResolvedValue(null),
-      renderEmailTemplateFromContent: jest.fn().mockResolvedValue({
-        subject: '<strong>Subject</strong>',
-        body: '<p>Body template</p>',
-      }),
-      cancelNotification: jest.fn().mockResolvedValue(undefined),
+    expect(mockedApi.listNotifications).toHaveBeenCalledWith({ status: 'SENT' }, 2, 50);
+    expect(result.data).toHaveLength(1);
+  });
+
+  it('wraps API failures in a message the error boundary can show', async () => {
+    mockedApi.listNotifications.mockRejectedValue(
+      new VintaSendApiError('UPSTREAM_ERROR', 'API unreachable', 503),
+    );
+
+    await expect(fetchNotifications({}, 1, 20)).rejects.toThrow(
+      'Failed to fetch notifications: API unreachable',
+    );
+  });
+});
+
+describe('collection actions', () => {
+  it.each([
+    [fetchPendingNotifications, 'listPendingNotifications'],
+    [fetchFutureNotifications, 'listFutureNotifications'],
+    [fetchOneOffNotifications, 'listOneOffNotifications'],
+  ] as const)('delegates to %s', async (action, method) => {
+    mockedApi[method].mockResolvedValue(makePage([]));
+
+    await action(3, 10);
+
+    expect(mockedApi[method]).toHaveBeenCalledWith(3, 10);
+  });
+});
+
+describe('fetchNotificationDetail', () => {
+  it('returns the notification detail', async () => {
+    const detail = {
+      ...makeNotification(),
+      contextUsed: { key: 'value' },
+      contextParameters: null,
+      extraParams: null,
+      attachments: [],
     };
-    (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+    mockedApi.getNotification.mockResolvedValue(detail as never);
+
+    await expect(fetchNotificationDetail('notif-1')).resolves.toEqual(detail);
   });
 
-  describe('fetchNotifications', () => {
-    it('2.3: fetchNotifications returns PaginatedResult shape (mock)', async () => {
-      const result = await fetchNotifications({}, 1, 10);
+  it('wraps failures', async () => {
+    mockedApi.getNotification.mockRejectedValue(
+      new VintaSendApiError('NOT_FOUND', 'Notification with ID notif-9 was not found.', 404),
+    );
 
-      expect(result).toHaveProperty('data');
-      expect(result).toHaveProperty('page');
-      expect(result).toHaveProperty('pageSize');
-      expect(result).toHaveProperty('hasMore');
+    await expect(fetchNotificationDetail('notif-9')).rejects.toThrow(
+      'Failed to fetch notification detail: Notification with ID notif-9 was not found.',
+    );
+  });
+});
 
-      expect(Array.isArray(result.data)).toBe(true);
-      expect(typeof result.page).toBe('number');
-      expect(typeof result.pageSize).toBe('number');
-      expect(typeof result.hasMore).toBe('boolean');
+describe('fetchNotificationPreview', () => {
+  it('returns a success state with the rendered templates', async () => {
+    mockedApi.getNotificationPreview.mockResolvedValue({
+      gitCommitSha: 'abc123',
+      bodyTemplatePath: 'emails/body.pug',
+      subjectTemplatePath: 'emails/subject.pug',
+      renderedBodyHtml: '<p>Body</p>',
+      renderedSubjectHtml: '<h1>Subject</h1>',
     });
 
-    it('returns items with correct shape', async () => {
-      const result = await fetchNotifications({}, 1, 10);
-      const item = result.data[0];
-
-      if (item) {
-        // Should have either userId or emailOrPhone depending on type
-        const hasUserId = 'userId' in item;
-        const hasEmailOrPhone = 'emailOrPhone' in item;
-        expect(hasUserId || hasEmailOrPhone).toBe(true);
-
-        // Common fields
-        expect(item).toHaveProperty('id');
-        expect(item).toHaveProperty('notificationType');
-        expect(item).toHaveProperty('title');
-        expect(item).toHaveProperty('status');
-        expect(item).toHaveProperty('contextName');
-        expect(item).toHaveProperty('createdAt');
-      }
-    });
-
-    it('respects pageSize parameter', async () => {
-      const result = await fetchNotifications({}, 1, 5);
-      expect(result.data.length).toBeLessThanOrEqual(5);
-      expect(result.pageSize).toBe(5);
-    });
-
-    it('respects page parameter', async () => {
-      const page1 = await fetchNotifications({}, 1, 10);
-      const page2 = await fetchNotifications({}, 2, 10);
-
-      // Pages should have different data (unless we're on the last page)
-      if (page1.hasMore) {
-        expect(page1.data[0]?.id).not.toBe(page2.data[0]?.id);
-      }
-    });
-
-    it('filters by status delegates to getPendingNotifications for PENDING_SEND', async () => {
-      const result = await fetchNotifications({ status: 'PENDING_SEND' }, 1, 100);
-      result.data.forEach((item: AnyDashboardNotification) => {
-        expect(item.status).toBe('PENDING_SEND');
-      });
-    });
-
-    it('passes filters through to backend without client-side filtering', async () => {
-      const result = await fetchNotifications({ notificationType: 'EMAIL' }, 1, 100);
-      // Without client-side filtering, all backend results are returned as-is
-      expect(result.data.length).toBe(3);
-    });
-
-    it('passes combined filters to backend without client-side filtering', async () => {
-      const result = await fetchNotifications(
-        { status: 'SENT', notificationType: 'EMAIL' },
-        1,
-        100,
-      );
-      // Backend returns all results; no client-side filtering
-      expect(result.data.length).toBe(3);
-    });
-
-    it('returns correct pagination info', async () => {
-      const result = await fetchNotifications({}, 1, 10);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(10);
-      expect(typeof result.hasMore).toBe('boolean');
+    await expect(fetchNotificationPreview('notif-1')).resolves.toEqual({
+      state: 'success',
+      gitCommitSha: 'abc123',
+      bodyTemplatePath: 'emails/body.pug',
+      subjectTemplatePath: 'emails/subject.pug',
+      renderedBodyHtml: '<p>Body</p>',
+      renderedSubjectHtml: '<h1>Subject</h1>',
     });
   });
 
-  describe('fetchNotificationDetail', () => {
-    it('returns detail with contextUsed and extraParams', async () => {
-      const detail = await fetchNotificationDetail('test-id');
+  it('maps PREVIEW_UNAVAILABLE to the missing-SHA state', async () => {
+    mockedApi.getNotificationPreview.mockRejectedValue(
+      new VintaSendApiError('PREVIEW_UNAVAILABLE', 'No tracked commit SHA.', 409),
+    );
 
-      expect(detail).toHaveProperty('id');
-      expect(detail).toHaveProperty('status');
-      expect(detail).toHaveProperty('contextUsed');
-      expect(detail).toHaveProperty('extraParams');
-
-      // contextUsed should be object or null
-      expect(
-        detail.contextUsed === null || typeof detail.contextUsed === 'object',
-      ).toBe(true);
-      expect(typeof detail.extraParams).toBe('object');
-    });
-
-    it('includes full bodyTemplate for detail view', async () => {
-      const detail = await fetchNotificationDetail('test-id');
-      expect(detail).toHaveProperty('bodyTemplate');
-      expect(typeof detail.bodyTemplate).toBe('string');
-      expect(detail.bodyTemplate.length).toBeGreaterThan(0);
+    await expect(fetchNotificationPreview('notif-1')).resolves.toEqual({
+      state: 'missing_sha',
+      message: 'No tracked commit SHA.',
     });
   });
 
-  describe('fetchPendingNotifications', () => {
-    it('returns only pending notifications', async () => {
-      const result = await fetchPendingNotifications(1, 100);
-      result.data.forEach((item: AnyDashboardNotification) => {
-        expect(item.status).toBe('PENDING_SEND');
-      });
+  it('maps any other failure to the error state', async () => {
+    mockedApi.getNotificationPreview.mockRejectedValue(
+      new VintaSendApiError('UPSTREAM_ERROR', 'GitHub is down.', 502),
+    );
+
+    await expect(fetchNotificationPreview('notif-1')).resolves.toEqual({
+      state: 'error',
+      message: 'GitHub is down.',
     });
   });
+});
 
-  describe('fetchFutureNotifications', () => {
-    it('returns only future notifications (sendAfter > now)', async () => {
-      const result = await fetchFutureNotifications(1, 100);
-      const now = new Date();
+describe('resendNotification', () => {
+  it('returns the new notification on success', async () => {
+    const resent = makeNotification({ id: 'notif-2' });
+    mockedApi.resendNotification.mockResolvedValue(resent);
 
-      result.data.forEach((item: AnyDashboardNotification) => {
-        if (item.sendAfter) {
-          const sendAfterDate = new Date(item.sendAfter);
-          expect(sendAfterDate > now).toBe(true);
-        }
-      });
+    await expect(resendNotification('notif-1', true)).resolves.toEqual({
+      success: true,
+      notification: resent,
     });
+    expect(mockedApi.resendNotification).toHaveBeenCalledWith('notif-1', true);
   });
 
-  describe('fetchOneOffNotifications', () => {
-    it('returns only one-off notifications', async () => {
-      const result = await fetchOneOffNotifications(1, 100);
-      result.data.forEach((item: AnyDashboardNotification) => {
-        expect(item.id.startsWith('oneoff-')).toBe(true);
-        expect('emailOrPhone' in item).toBe(true);
-      });
+  it('returns the API message when the resend is refused', async () => {
+    mockedApi.resendNotification.mockRejectedValue(
+      new VintaSendApiError('CONFLICT', 'The notification could not be resent.', 409),
+    );
+
+    await expect(resendNotification('notif-1', false)).resolves.toEqual({
+      success: false,
+      error: 'The notification could not be resent.',
     });
   });
+});
 
-  describe('PaginatedResult type', () => {
-    it('data elements have all required fields for list display', async () => {
-      const result = await fetchNotifications({}, 1, 10);
+describe('cancelNotification', () => {
+  it('reports success', async () => {
+    mockedApi.cancelNotification.mockResolvedValue({ id: 'notif-1', status: 'CANCELLED' });
 
-      result.data.forEach((notification: AnyDashboardNotification) => {
-        // All notifications should have these
-        expect(notification.id).toBeDefined();
-        expect(notification.notificationType).toBeDefined();
-        expect(notification.status).toBeDefined();
-        expect(notification.title).toBeDefined();
-        expect(notification.contextName).toBeDefined();
-        expect(notification.createdAt).toBeDefined();
-
-        // Dates should be ISO strings
-        if (notification.sentAt) {
-          expect(typeof notification.sentAt).toBe('string');
-          expect(notification.sentAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-        }
-        if (notification.readAt) {
-          expect(typeof notification.readAt).toBe('string');
-          expect(notification.readAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-        }
-      });
-    });
+    await expect(cancelNotification('notif-1')).resolves.toEqual({ success: true });
   });
 
-  describe('fetchNotificationPreview', () => {
-    it('returns success payload with template content when notification has gitCommitSha', async () => {
-      const mockService = {
-        getNotification: jest.fn().mockResolvedValue(
-          createMockNotification({
-            id: 'notif-preview',
-            gitCommitSha: 'a'.repeat(40),
-            bodyTemplate: 'templates/body.pug',
-            subjectTemplate: 'templates/subject.pug',
-            contextUsed: { patientName: 'John' },
-          }),
-        ),
-        getOneOffNotification: jest.fn().mockResolvedValue(null),
-        renderEmailTemplateFromContent: jest.fn().mockResolvedValue({
-          subject: '<strong>Rendered Subject</strong>',
-          body: '<p>Rendered Body</p>',
-        }),
-      };
-      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
+  it('reports the conflict message when the notification is not pending', async () => {
+    mockedApi.cancelNotification.mockRejectedValue(
+      new VintaSendApiError(
+        'CONFLICT',
+        'Only notifications in PENDING_SEND status can be cancelled.',
+        409,
+      ),
+    );
 
-      mockGitHubGetTemplateContentByCommit
-        .mockResolvedValueOnce('<p>Body template</p>')
-        .mockResolvedValueOnce('Subject template');
-
-      const result = await fetchNotificationPreview('notif-preview');
-
-      expect(result.state).toBe('success');
-      if (result.state === 'success') {
-        expect(result.gitCommitSha).toBe('a'.repeat(40));
-        expect(result.renderedBodyHtml).toBe('<p>Rendered Body</p>');
-        expect(result.renderedSubjectHtml).toBe('<strong>Rendered Subject</strong>');
-      }
-      expect(mockGitHubGetTemplateContentByCommit).toHaveBeenCalledTimes(2);
-      expect(mockGitHubGetLatestMainCommitSha).not.toHaveBeenCalled();
-      expect(mockService.renderEmailTemplateFromContent).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'notif-preview' }),
-        {
-          body: '<p>Body template</p>',
-          subject: 'Subject template',
-        },
-        {
-          context: { patientName: 'John' },
-        },
-      );
-    });
-
-    it('uses latest main branch commit sha when notification is PENDING_SEND and has no gitCommitSha', async () => {
-      const mockService = {
-        getNotification: jest.fn().mockResolvedValue(
-          createMockNotification({
-            id: 'notif-pending-no-sha',
-            status: 'PENDING_SEND',
-            gitCommitSha: null,
-            bodyTemplate: 'templates/body.pug',
-            subjectTemplate: 'templates/subject.pug',
-          }),
-        ),
-        getOneOffNotification: jest.fn().mockResolvedValue(null),
-        renderEmailTemplateFromContent: jest.fn().mockResolvedValue({
-          subject: '<strong>Rendered Subject</strong>',
-          body: '<p>Rendered Body</p>',
-        }),
-      };
-      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
-
-      mockGitHubGetLatestMainCommitSha.mockResolvedValue('m'.repeat(40));
-      mockGitHubGetTemplateContentByCommit
-        .mockResolvedValueOnce('<p>Body template</p>')
-        .mockResolvedValueOnce('Subject template');
-
-      const result = await fetchNotificationPreview('notif-pending-no-sha');
-
-      expect(result.state).toBe('success');
-      if (result.state === 'success') {
-        expect(result.gitCommitSha).toBe('m'.repeat(40));
-      }
-      expect(mockGitHubGetLatestMainCommitSha).toHaveBeenCalledTimes(1);
-      expect(mockGitHubGetTemplateContentByCommit).toHaveBeenCalledWith({
-        templatePath: 'templates/body.pug',
-        gitCommitSha: 'm'.repeat(40),
-      });
-    });
-
-    it('returns missing_sha when notification has no gitCommitSha and is not PENDING_SEND', async () => {
-      const mockService = {
-        getNotification: jest.fn().mockResolvedValue(
-          createMockNotification({
-            id: 'notif-no-sha',
-            status: 'FAILED',
-            gitCommitSha: null,
-          }),
-        ),
-        getOneOffNotification: jest.fn().mockResolvedValue(null),
-        renderEmailTemplateFromContent: jest.fn(),
-      };
-      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
-
-      const result = await fetchNotificationPreview('notif-no-sha');
-
-      expect(result.state).toBe('missing_sha');
-      expect(mockGitHubGetLatestMainCommitSha).not.toHaveBeenCalled();
-      expect(mockGitHubGetTemplateContentByCommit).not.toHaveBeenCalled();
-    });
-
-    it('returns error state when GitHub fetch fails', async () => {
-      const mockService = {
-        getNotification: jest.fn().mockResolvedValue(
-          createMockNotification({
-            id: 'notif-github-error',
-            gitCommitSha: 'b'.repeat(40),
-            bodyTemplate: 'templates/body.pug',
-          }),
-        ),
-        getOneOffNotification: jest.fn().mockResolvedValue(null),
-      };
-      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
-
-      mockGitHubGetTemplateContentByCommit.mockRejectedValue(
-        new Error('GitHub API rate limit exceeded while fetching template preview.'),
-      );
-
-      const result = await fetchNotificationPreview('notif-github-error');
-
-      expect(result).toEqual({
-        state: 'error',
-        message: 'GitHub API rate limit exceeded while fetching template preview.',
-      });
-    });
-  });
-
-  describe('cancelNotification', () => {
-    it('cancels notifications in PENDING_SEND status', async () => {
-      const mockService = {
-        getNotification: jest.fn().mockResolvedValue(
-          createMockNotification({
-            id: 'notif-pending',
-            status: 'PENDING_SEND',
-          }),
-        ),
-        getOneOffNotification: jest.fn().mockResolvedValue(null),
-        cancelNotification: jest.fn().mockResolvedValue(undefined),
-      };
-      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
-
-      const result = await cancelNotification('notif-pending');
-
-      expect(result).toEqual({ success: true });
-      expect(mockService.cancelNotification).toHaveBeenCalledWith('notif-pending');
-    });
-
-    it('returns error when notification is not PENDING_SEND', async () => {
-      const mockService = {
-        getNotification: jest.fn().mockResolvedValue(
-          createMockNotification({
-            id: 'notif-sent',
-            status: 'SENT',
-          }),
-        ),
-        getOneOffNotification: jest.fn().mockResolvedValue(null),
-        cancelNotification: jest.fn().mockResolvedValue(undefined),
-      };
-      (getVintaSendService as jest.Mock).mockResolvedValue(mockService);
-
-      const result = await cancelNotification('notif-sent');
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Only notifications in PENDING_SEND status can be cancelled.',
-      });
-      expect(mockService.cancelNotification).not.toHaveBeenCalled();
+    await expect(cancelNotification('notif-1')).resolves.toEqual({
+      success: false,
+      error: 'Only notifications in PENDING_SEND status can be cancelled.',
     });
   });
 });

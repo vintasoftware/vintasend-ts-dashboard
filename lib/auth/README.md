@@ -48,7 +48,7 @@ This client:
 2. Register the new strategy in `resolveAuthStrategy()`.
 3. Update `proxy.ts` to handle the new provider's middleware requirements.
 4. Document the new environment variables in `.env.example` and
-   `src/tools/vintasend-dashboard/README.md`.
+   the dashboard `README.md`.
 5. Add provider-specific setup instructions to the main README.
 
 ## Client Usage

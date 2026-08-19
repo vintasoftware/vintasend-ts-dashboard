@@ -1,32 +1,53 @@
 # VintaSend Dashboard
 
-This dashboard is a Next.js app with pluggable authentication (Clerk or Auth0)
-selected via environment variables.
+Next.js dashboard for browsing, previewing, resending and cancelling
+[VintaSend](https://github.com/vintasoftware/vintasend-ts) notifications, with
+pluggable authentication (Clerk or Auth0) selected via environment variables.
 
-## After cloning
+The dashboard is a **pure client of the
+[VintaSend API](https://github.com/vintasoftware/vintasend-ts-api)**. It holds no
+notification backend, no database credentials and no template rendering: it
+reads and writes everything through the API's HTTP contract. Any implementation
+of that contract can serve this UI — including one built on the Python
+`vintasend` package.
 
-1. Go to the dashboard folder:
-
-```bash
-cd src/tools/vintasend-dashboard
+```
+┌─────────────────────┐   HTTPS + API key    ┌──────────────────┐
+│  This dashboard     │ ───────────────────▶ │  vintasend-api   │
+│  (Clerk / Auth0)    │ ◀─────────────────── │  + your backend  │
+└─────────────────────┘     JSON contract    └──────────────────┘
 ```
 
-2. Install dependencies:
+Calls to the API are made **from the dashboard's server only** (server
+components and server actions), so `VINTASEND_API_KEY` never reaches a browser.
+
+## Getting started
+
+1. Install dependencies:
 
 ```bash
 npm install
 ```
 
-3. Create your local environment file from the example:
+2. Create your local environment file:
 
 ```bash
 cp .env.example .env.local
 ```
 
-4. Configure auth and backend variables in `.env.local`.
-5. Configure your VintaSend service in `lib/notifications/get-vintasend-service.ts` (see section below).
-6. Remove the `lib/notifications/get-vintasend-service.ts` from the `.gitignore` file.
-7. Start the app:
+3. Point the dashboard at a running VintaSend API:
+
+```bash
+VINTASEND_API_URL=http://localhost:3333
+VINTASEND_API_KEY=the-same-key-the-api-was-started-with
+```
+
+If you do not have an API running yet, follow the setup in
+[vintasend-ts-api](https://github.com/vintasoftware/vintasend-ts-api) — that is
+where you configure which VintaSend backend, adapters and template renderer to
+use, along with the GitHub credentials used for template previews.
+
+4. Configure authentication (see below), then start the app:
 
 ```bash
 npm run dev
@@ -34,43 +55,21 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Getting Started
+## Architecture
 
-First, install dependencies and run the development server:
+| Path | Responsibility |
+| --- | --- |
+| `lib/api/types.ts` | The API's wire contract, mirroring `openapi.yaml` in the API repo. |
+| `lib/api/client.ts` | Server-only HTTP client: base URL, bearer key, error envelope. |
+| `lib/api/notifications.ts` | Typed wrappers for each endpoint. |
+| `lib/notifications/types.ts` | UI filter state, plus a single import point for contract types. |
+| `app/actions.ts` | Server actions the client components call. |
+| `app/components/` | The notifications page: table, filters, detail panel, dialogs. |
 
-```bash
-npm install
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-## Configure your VintaSend service
-
-The dashboard uses `lib/notifications/get-vintasend-service.ts` as the backend
-factory for all notification actions. You must adapt this file to your own
-VintaSend implementation.
-
-Minimum setup:
-
-1. Open `lib/notifications/get-vintasend-service.ts`.
-2. Replace imports from the Medplum example with imports from your service
-	package/module.
-3. Build and return your configured VintaSend service in
-	`getVintaSendService()`.
-4. Update `validateBackendConfig()` so it checks only the environment
-	variables required by your backend.
-5. Ensure all required backend env vars are present in `.env.local`.
-
-You can use `lib/notifications/get-vintasend-service.ts.example` as a starting
-point and keep a project-specific implementation in
-`lib/notifications/get-vintasend-service.ts`.
+Notifications arrive with a `kind` discriminator (`user` or `one-off`), so
+components branch on that rather than sniffing for fields. Errors from the API
+carry a machine-readable `code`; the preview dialog, for example, distinguishes
+`PREVIEW_UNAVAILABLE` from a genuine failure.
 
 ## Authentication
 
@@ -105,10 +104,12 @@ auth flows, while the app layout wraps the UI with the provider component.
 
 **Note:** This dashboard uses Auth0 SDK v4, which no longer uses the `/api` prefix for auth routes. The routes are now mounted automatically by the middleware at `/auth/*`.
 
-### Environment variables
+## Environment variables
 
 | Variable | Provider | Description |
 | --- | --- | --- |
+| VINTASEND_API_URL | API | Base URL of the VintaSend API (e.g. `http://localhost:3333`). |
+| VINTASEND_API_KEY | API | Shared secret sent as a bearer token. Server-side only. |
 | AUTH_PROVIDER | Clerk, Auth0 | Selects which auth strategy to use (`clerk` or `auth0`). |
 | NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY | Clerk | Clerk publishable key. |
 | CLERK_SECRET_KEY | Clerk | Clerk secret key. |
@@ -117,10 +118,19 @@ auth flows, while the app layout wraps the UI with the provider component.
 | AUTH0_DOMAIN | Auth0 | Auth0 tenant domain without scheme (e.g. `example.us.auth0.com`). **Note:** In Auth0 v4, this was renamed from `AUTH0_ISSUER_BASE_URL` and no longer accepts `https://`. |
 | AUTH0_CLIENT_ID | Auth0 | Auth0 application client ID. |
 | AUTH0_CLIENT_SECRET | Auth0 | Auth0 application client secret. |
-| GITHUB_REPO | Notifications preview | GitHub repository in `owner/repo` format used to fetch templates by commit. |
-| GITHUB_API_KEY | Notifications preview | GitHub token with repository read access. |
-| GITHUB_API_BASE_URL | Notifications preview | Optional GitHub API base URL (defaults to `https://api.github.com`). |
-| GITHUB_TEMPLATES_BASE_PATH | Notifications preview | Optional base path prefixed to template paths before GitHub fetch. |
+
+Backend credentials (database, mail provider, GitHub token for template
+previews) now belong to the API, not to this app.
+
+## Development
+
+```bash
+npm run dev        # dev server
+npm test           # jest
+npm run typecheck  # tsc --noEmit
+npm run lint       # eslint
+npm run build      # production build
+```
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
@@ -132,8 +142,6 @@ To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
 ## Deploy on Vercel
 

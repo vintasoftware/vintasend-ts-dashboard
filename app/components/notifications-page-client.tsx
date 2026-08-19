@@ -4,7 +4,13 @@ import type { SortingState } from '@tanstack/react-table';
 import { useCallback, useTransition, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import type { AnyDashboardNotification, NotificationFilters, PaginatedResult } from '@/lib/notifications/types';
+import {
+  NOTIFICATION_FILTER_KEYS,
+  NOTIFICATION_SORTABLE_FIELDS,
+  type Notification,
+  type NotificationFilters,
+  type PaginatedResponse,
+} from '@/lib/notifications/types';
 import { NotificationsFilters } from './notifications-filters';
 import { NotificationsTable } from './notifications-table';
 import { NotificationDetail } from './notification-detail';
@@ -14,30 +20,27 @@ import { CancelNotificationDialog } from './cancel-notification-dialog';
 import { cancelNotification, fetchNotifications } from '../actions';
 
 interface NotificationsPageClientProps {
-  initialData: PaginatedResult<AnyDashboardNotification>;
+  initialData: PaginatedResponse<Notification>;
   initialFilters: NotificationFilters;
   initialPage: number;
 }
 
 function buildFiltersFromParams(params: URLSearchParams): NotificationFilters {
-  return {
-    status: (params.get('status') as NotificationFilters['status']) ?? undefined,
-    notificationType:
-      (params.get('notificationType') as NotificationFilters['notificationType']) ?? undefined,
-    adapterUsed: params.get('adapterUsed') ?? undefined,
-    userId: params.get('userId') ?? undefined,
-    bodyTemplate: params.get('bodyTemplate') ?? undefined,
-    subjectTemplate: params.get('subjectTemplate') ?? undefined,
-    contextName: params.get('contextName') ?? undefined,
-    tenant: params.get('tenant') ?? undefined,
-    createdAtFrom: params.get('createdAtFrom') ?? undefined,
-    createdAtTo: params.get('createdAtTo') ?? undefined,
-    sentAtFrom: params.get('sentAtFrom') ?? undefined,
-    sentAtTo: params.get('sentAtTo') ?? undefined,
-    orderByField: (params.get('orderByField') as NotificationFilters['orderByField']) ?? undefined,
-    orderByDirection:
-      (params.get('orderByDirection') as NotificationFilters['orderByDirection']) ?? undefined,
-  };
+  const filters: NotificationFilters = {};
+
+  for (const key of NOTIFICATION_FILTER_KEYS) {
+    const value = params.get(key);
+    if (value) {
+      filters[key] = value as never;
+    }
+  }
+
+  filters.orderByField =
+    (params.get('orderByField') as NotificationFilters['orderByField']) ?? undefined;
+  filters.orderByDirection =
+    (params.get('orderByDirection') as NotificationFilters['orderByDirection']) ?? undefined;
+
+  return filters;
 }
 
 /**
@@ -184,14 +187,8 @@ export function NotificationsPageClient({
           // Build new search params
           const params = new URLSearchParams(searchParams);
 
-          // Update or remove filter params
           // Sync all filter fields to URL search params
-          const filterKeys: (keyof NotificationFilters)[] = [
-            'status', 'notificationType', 'adapterUsed', 'userId',
-            'bodyTemplate', 'subjectTemplate', 'contextName', 'tenant',
-            'createdAtFrom', 'createdAtTo', 'sentAtFrom', 'sentAtTo',
-          ];
-          for (const key of filterKeys) {
+          for (const key of NOTIFICATION_FILTER_KEYS) {
             const value = newFilters[key];
             if (value) {
               params.set(key, value);
@@ -252,20 +249,12 @@ export function NotificationsPageClient({
           const params = new URLSearchParams(searchParams);
           const firstSort = sorting[0];
 
-          console.log('[notifications.ui] sorting change', {
-            sorting,
-            firstSort,
-          });
-
-          const sortableFields: NonNullable<NotificationFilters['orderByField']>[] = [
-            'sendAfter',
-            'sentAt',
-            'readAt',
-            'createdAt',
-            'updatedAt',
-          ];
-
-          if (firstSort && sortableFields.includes(firstSort.id as NonNullable<NotificationFilters['orderByField']>)) {
+          if (
+            firstSort &&
+            NOTIFICATION_SORTABLE_FIELDS.includes(
+              firstSort.id as (typeof NOTIFICATION_SORTABLE_FIELDS)[number],
+            )
+          ) {
             params.set('orderByField', firstSort.id);
             params.set('orderByDirection', firstSort.desc ? 'desc' : 'asc');
           } else {
@@ -278,12 +267,6 @@ export function NotificationsPageClient({
           router.replace(`?${params.toString()}`, { scroll: false });
 
           const nextFilters = buildFiltersFromParams(params);
-          console.log('[notifications.ui] fetch after sorting', {
-            page: 1,
-            pageSize: data.pageSize,
-            nextFilters,
-          });
-
           const result = await fetchNotifications(nextFilters, 1, data.pageSize);
           setData(result);
         } catch (error) {

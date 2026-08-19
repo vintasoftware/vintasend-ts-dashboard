@@ -1,11 +1,11 @@
 import '@testing-library/jest-dom';
 import { act, render, screen, waitFor } from '@testing-library/react';
 
-import { PreviewRenderDialog } from '@/app/notifications/components/preview-render-dialog';
+import { PreviewRenderDialog } from '@/app/components/preview-render-dialog';
 
 const mockFetchNotificationPreview = jest.fn();
 
-jest.mock('@/app/notifications/actions', () => ({
+jest.mock('@/app/actions', () => ({
   fetchNotificationPreview: (...args: unknown[]) => mockFetchNotificationPreview(...args),
 }));
 

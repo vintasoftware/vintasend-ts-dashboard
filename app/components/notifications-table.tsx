@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { AnyDashboardNotification } from '@/lib/notifications/types';
+import type { Notification } from '@/lib/notifications/types';
 import { createColumns, columns as defaultColumns } from './columns';
 
 
@@ -29,14 +29,14 @@ type SkeletonRow = {
   isSkeleton: true;
 };
 
-type DataRow = Row<AnyDashboardNotification> & {
+type DataRow = Row<Notification> & {
     id: string;
-    original: AnyDashboardNotification;
+    original: Notification;
     isSkeleton: false;
 };
 
 interface NotificationsTableProps {
-  data: AnyDashboardNotification[];
+  data: Notification[];
   hasMore: boolean;
   currentPage: number;
   pageSize: number;
@@ -191,7 +191,7 @@ export function NotificationsTable({
                     ))
                   ) : (
                     // Normal row
-                    row.getVisibleCells().map((cell: Cell<AnyDashboardNotification, unknown>) => (
+                    row.getVisibleCells().map((cell: Cell<Notification, unknown>) => (
                       <TableCell key={cell.id} className="py-2 px-3">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>

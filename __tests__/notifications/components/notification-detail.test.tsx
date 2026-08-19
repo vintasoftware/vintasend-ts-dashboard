@@ -6,12 +6,12 @@
 import '@testing-library/jest-dom';
 import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NotificationDetail } from '@/app/notifications/components/notification-detail';
+import { NotificationDetail } from '@/app/components/notification-detail';
 
 // Mock the fetchNotificationDetail server action
 const mockFetchNotificationDetail = jest.fn();
 
-jest.mock('@/app/notifications/actions', () => ({
+jest.mock('@/app/actions', () => ({
   fetchNotificationDetail: (...args: unknown[]) => mockFetchNotificationDetail(...args),
 }));
 
@@ -19,6 +19,7 @@ jest.mock('@/app/notifications/actions', () => ({
  * Mock notification detail data for testing.
  */
 const mockNotificationDetail = {
+  kind: 'user' as const,
   id: 'notif-123',
   userId: 'user-456',
   notificationType: 'EMAIL' as const,
@@ -55,6 +56,7 @@ const mockNotificationDetail = {
  * Mock one-off notification detail data for testing.
  */
 const mockOneOffNotificationDetail = {
+  kind: 'one-off' as const,
   id: 'notif-one-off',
   emailOrPhone: 'guest@example.com',
   firstName: 'Jane',

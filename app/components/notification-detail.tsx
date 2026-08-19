@@ -16,11 +16,12 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import type {
-  AnyDashboardNotificationDetail,
-  DashboardNotificationDetail,
-  DashboardOneOffNotificationDetail,
+  JsonValue,
+  NotificationDetail,
+  NotificationStatus,
+  NotificationType,
+  OneOffNotificationDetail,
 } from '@/lib/notifications/types';
-import type { NotificationStatus, NotificationType } from 'vintasend';
 import { fetchNotificationDetail } from '../actions';
 
 /**
@@ -64,9 +65,9 @@ function formatDate(dateString: string | null | undefined): string {
  * Determines if a notification is one-off (has emailOrPhone instead of userId).
  */
 function isOneOff(
-  notification: AnyDashboardNotificationDetail,
-): notification is DashboardOneOffNotificationDetail {
-  return 'emailOrPhone' in notification;
+  notification: NotificationDetail,
+): notification is OneOffNotificationDetail {
+  return notification.kind === 'one-off';
 }
 
 /**
@@ -100,13 +101,13 @@ function CodeBlock({
   testId,
 }: {
   title: string;
-  content: string | object | null | undefined;
+  content: JsonValue | undefined;
   testId?: string;
 }) {
   const displayContent =
     typeof content === 'object' && content !== null
       ? JSON.stringify(content, null, 2)
-      : content || '—';
+      : String(content ?? '') || '—';
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(displayContent);
@@ -200,7 +201,7 @@ interface NotificationDetailProps {
  * Fetches notification data via server action when opened.
  */
 export function NotificationDetail({ notificationId, onClose }: NotificationDetailProps) {
-  const [notification, setNotification] = useState<AnyDashboardNotificationDetail | null>(null);
+  const [notification, setNotification] = useState<NotificationDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -296,20 +297,18 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
           <DetailField label="ID" value={notification.id} monospace />
           <DetailField label="Context" value={notification.contextName || '—'} />
           
-          {isOneOffNotification ? (
+          {isOneOff(notification) ? (
             <>
               <DetailField label="Email/Phone" value={notification.emailOrPhone} />
               <DetailField
                 label="Name"
-                value={`${notification.firstName} ${notification.lastName}`.trim() || '—'}
+                value={
+                  [notification.firstName, notification.lastName].filter(Boolean).join(' ') || '—'
+                }
               />
             </>
           ) : (
-            <DetailField
-              label="User ID"
-              value={(notification as DashboardNotificationDetail).userId}
-              monospace
-            />
+            <DetailField label="User ID" value={notification.userId} monospace />
           )}
 
           <DetailField label="Tenant" value={notification.tenant || '—'} />
@@ -384,7 +383,7 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
         {notification.extraParams && (
           <CodeBlock
             title="Extra Parameters"
-            content={JSON.stringify(notification.extraParams, null, 2)}
+            content={notification.extraParams}
             testId="extra-params"
           />
         )}

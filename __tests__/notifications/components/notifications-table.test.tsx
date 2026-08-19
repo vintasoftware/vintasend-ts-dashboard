@@ -6,14 +6,15 @@
 import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NotificationsTable } from '@/app/notifications/components/notifications-table';
-import type { AnyDashboardNotification } from '@/lib/notifications/types';
+import { NotificationsTable } from '@/app/components/notifications-table';
+import type { Notification } from '@/lib/notifications/types';
 
 /**
  * Mock notification data for testing.
  */
-const mockNotifications: AnyDashboardNotification[] = [
+const mockNotifications: Notification[] = [
   {
+    kind: 'user',
     id: '1',
     userId: 'user-123',
     notificationType: 'EMAIL',
@@ -24,6 +25,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     sentAt: '2024-01-02T10:00:00Z',
     readAt: '2024-01-02T11:00:00Z',
     createdAt: '2024-01-01T09:00:00Z',
+    updatedAt: '2024-01-02T10:00:00Z',
     adapterUsed: 'nodemailer',
     gitCommitSha: 'a'.repeat(40),
     bodyTemplate: '<p>Welcome!</p>',
@@ -31,6 +33,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     tenant: null,
   },
   {
+    kind: 'one-off',
     id: '2',
     emailOrPhone: 'test@example.com',
     firstName: 'John',
@@ -43,6 +46,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     sentAt: null,
     readAt: null,
     createdAt: '2024-01-03T09:00:00Z',
+    updatedAt: '2024-01-03T09:00:00Z',
     adapterUsed: 'twilio',
     gitCommitSha: null,
     bodyTemplate: 'Your code is: 123456',
@@ -50,6 +54,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     tenant: null,
   },
   {
+    kind: 'user',
     id: '3',
     userId: 'user-456',
     notificationType: 'PUSH',
@@ -60,6 +65,7 @@ const mockNotifications: AnyDashboardNotification[] = [
     sentAt: null,
     readAt: null,
     createdAt: '2024-01-04T09:00:00Z',
+    updatedAt: '2024-01-04T09:00:00Z',
     adapterUsed: null,
     gitCommitSha: null,
     bodyTemplate: 'Alert: Important update',

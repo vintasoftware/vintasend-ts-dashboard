@@ -53,6 +53,8 @@ type NotificationBase = {
   bodyTemplate: string;
   subjectTemplate: string | null;
   gitCommitSha: string | null;
+  requestedTemplateVersion: number | null;
+  usedTemplateVersion: number | null;
   tenant: string | null;
 };
 
@@ -118,6 +120,8 @@ export type NotificationListQuery = {
   subjectTemplate?: string;
   contextName?: string;
   tenant?: string;
+  requestedTemplateVersion?: number;
+  usedTemplateVersion?: number;
   createdAtFrom?: string;
   createdAtTo?: string;
   sentAtFrom?: string;

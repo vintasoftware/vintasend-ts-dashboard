@@ -62,6 +62,28 @@ function formatDate(dateString: string | null | undefined): string {
 }
 
 /**
+ * Describes the two template-version fields as a single line.
+ *
+ * They usually hold the same number, or both hold nothing, so two separate rows would be noise.
+ * The cases where they differ are the ones worth reading: a notification pinned but not yet sent,
+ * one sent before it was repointed at another version, or a pin the renderer could not honour.
+ */
+function formatTemplateVersion(
+  requested: number | null | undefined,
+  used: number | null | undefined,
+): string {
+  // Version 0 is a legal version, so these compare against null rather than testing truthiness.
+  const requestedVersion = requested ?? null;
+  const usedVersion = used ?? null;
+
+  if (requestedVersion === null && usedVersion === null) return '—';
+  if (usedVersion === null) return `v${requestedVersion} requested`;
+  if (requestedVersion === null) return `v${usedVersion}`;
+  if (requestedVersion === usedVersion) return `v${usedVersion} (pinned)`;
+  return `v${usedVersion} sent, v${requestedVersion} requested`;
+}
+
+/**
  * Determines if a notification is one-off (has emailOrPhone instead of userId).
  */
 function isOneOff(
@@ -334,6 +356,13 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
                 '—'
               )
             }
+          />
+          <DetailField
+            label="Template Version"
+            value={formatTemplateVersion(
+              notification.requestedTemplateVersion,
+              notification.usedTemplateVersion,
+            )}
           />
         </div>
 

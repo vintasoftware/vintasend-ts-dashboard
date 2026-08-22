@@ -46,6 +46,8 @@ function createMockNotification(id: string, overrides = {}): Notification {
     updatedAt: new Date().toISOString(),
     adapterUsed: 'nodemailer',
     gitCommitSha: null,
+    requestedTemplateVersion: null,
+    usedTemplateVersion: null,
     tenant: null,
     bodyTemplate: 'Body template',
     subjectTemplate: 'Subject',

@@ -388,3 +388,74 @@ describe('NotificationDetail — Phase 6', () => {
     });
   });
 });
+
+describe('template versions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  async function renderWithVersions(versions: {
+    requestedTemplateVersion?: number | null;
+    usedTemplateVersion?: number | null;
+  }) {
+    mockFetchNotificationDetail.mockResolvedValueOnce({
+      ...mockNotificationDetail,
+      ...versions,
+    });
+
+    render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Template Version')).toBeInTheDocument();
+    });
+  }
+
+  it('marks a notification whose requested and used versions agree as pinned', async () => {
+    await renderWithVersions({ requestedTemplateVersion: 3, usedTemplateVersion: 3 });
+
+    expect(screen.getByText('v3 (pinned)')).toBeInTheDocument();
+  });
+
+  it('shows the bare version for an unpinned notification that has been sent', async () => {
+    await renderWithVersions({ requestedTemplateVersion: null, usedTemplateVersion: 5 });
+
+    expect(screen.getByText('v5')).toBeInTheDocument();
+  });
+
+  it('shows a pin that has not rendered yet as requested', async () => {
+    await renderWithVersions({ requestedTemplateVersion: 4, usedTemplateVersion: null });
+
+    expect(screen.getByText('v4 requested')).toBeInTheDocument();
+  });
+
+  it('spells out a divergence between what was asked for and what went out', async () => {
+    await renderWithVersions({ requestedTemplateVersion: 4, usedTemplateVersion: 2 });
+
+    expect(screen.getByText('v2 sent, v4 requested')).toBeInTheDocument();
+  });
+
+  it('renders version 0 rather than treating it as absent', async () => {
+    // 0 is a legal version that every truthiness check on the way here would drop.
+    await renderWithVersions({ requestedTemplateVersion: 0, usedTemplateVersion: 0 });
+
+    expect(screen.getByText('v0 (pinned)')).toBeInTheDocument();
+  });
+
+  it('falls back to a dash when the renderer does not version its templates', async () => {
+    await renderWithVersions({ requestedTemplateVersion: null, usedTemplateVersion: null });
+
+    const field = screen.getByText('Template Version').parentElement;
+    expect(field).toHaveTextContent('\u2014');
+  });
+
+  it('falls back to a dash for a server that predates the fields', async () => {
+    await renderWithVersions({});
+
+    const field = screen.getByText('Template Version').parentElement;
+    expect(field).toHaveTextContent('\u2014');
+  });
+});

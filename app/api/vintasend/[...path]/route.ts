@@ -91,9 +91,7 @@ async function handle(request: NextRequest, context: RouteContext): Promise<Next
   }
 
   const { path = [] } = await context.params;
-  const target = new URL(
-    `${config.baseUrl}/${path.map(encodeURIComponent).join('/')}`,
-  );
+  const target = new URL(`${config.baseUrl}/${path.map(encodeURIComponent).join('/')}`);
   target.search = request.nextUrl.search;
 
   const body = method === 'GET' ? undefined : await request.text();

@@ -1,7 +1,7 @@
 # VintaSend Dashboard
 
 Next.js dashboard for browsing, previewing, resending and cancelling
-[VintaSend](https://github.com/vintasoftware/vintasend) and 
+[VintaSend](https://github.com/vintasoftware/vintasend) and
 [VintaSend-TS](https://github.com/vintasoftware/vintasend-ts) notifications, with
 pluggable authentication (Clerk or Auth0) selected via environment variables.
 
@@ -59,7 +59,7 @@ VINTASEND_API_KEY=the-same-key-the-api-was-started-with
 ```
 
 If you do not have an API running yet, follow the setup in
-[vintasend-ts-api](https://github.com/vintasoftware/vintasend-ts-api) or 
+[vintasend-ts-api](https://github.com/vintasoftware/vintasend-ts-api) or
 [vintasend-api](https://github.com/vintasoftware/vintasend-api) — that is
 where you configure which VintaSend backend, adapters and template renderer to
 use, along with the GitHub credentials used for template previews.
@@ -74,13 +74,13 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Architecture
 
-| Path | Responsibility |
-| --- | --- |
-| `app/providers.tsx` | The query cache and the VintaSend client, pointed at the proxy route. |
+| Path                                   | Responsibility                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `app/providers.tsx`                    | The query cache and the VintaSend client, pointed at the proxy route.                |
 | `app/api/vintasend/[...path]/route.ts` | Session-checked proxy that adds the API key. The only server-side code that sees it. |
-| `app/components/` | The notifications page: table, filters, detail panel, dialogs. |
-| `lib/auth/` | Pluggable authentication. The core takes no position on this. |
-| `proxy.ts` | Route protection, and the provider context the proxy route needs. |
+| `app/components/`                      | The notifications page: table, filters, detail panel, dialogs.                       |
+| `lib/auth/`                            | Pluggable authentication. The core takes no position on this.                        |
+| `proxy.ts`                             | Route protection, and the provider context the proxy route needs.                    |
 
 There is no `lib/api` and no `app/actions.ts`. The contract types, the endpoint
 calls, the URL filter state and the cache invalidation all come from
@@ -137,9 +137,9 @@ auth flows, while the app layout wraps the UI with the provider component.
 
 1. Create an Auth0 Regular Web Application.
 2. Configure application URLs:
-	- Allowed Callback URLs: `http://localhost:3000/auth/callback`
-	- Allowed Logout URLs: `http://localhost:3000`
-	- Allowed Web Origins: `http://localhost:3000`
+   - Allowed Callback URLs: `http://localhost:3000/auth/callback`
+   - Allowed Logout URLs: `http://localhost:3000`
+   - Allowed Web Origins: `http://localhost:3000`
 3. Set `AUTH_PROVIDER=auth0` in `.env.local`.
 4. Add the Auth0 values listed below.
 5. Start the dev server and visit `/auth/login`.
@@ -148,18 +148,18 @@ auth flows, while the app layout wraps the UI with the provider component.
 
 ## Environment variables
 
-| Variable | Provider | Description |
-| --- | --- | --- |
-| VINTASEND_API_URL | API | Base URL of the VintaSend API (e.g. `http://localhost:3333`). |
-| VINTASEND_API_KEY | API | Shared secret sent as a bearer token. Server-side only. |
-| AUTH_PROVIDER | Clerk, Auth0 | Selects which auth strategy to use (`clerk` or `auth0`). |
-| NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY | Clerk | Clerk publishable key. |
-| CLERK_SECRET_KEY | Clerk | Clerk secret key. |
-| AUTH0_SECRET | Auth0 | Session cookie encryption secret. |
-| APP_BASE_URL | Auth0 | Base URL of the app (e.g. `http://localhost:3000`). **Note:** In Auth0 v4, this was renamed from `AUTH0_BASE_URL`. |
-| AUTH0_DOMAIN | Auth0 | Auth0 tenant domain without scheme (e.g. `example.us.auth0.com`). **Note:** In Auth0 v4, this was renamed from `AUTH0_ISSUER_BASE_URL` and no longer accepts `https://`. |
-| AUTH0_CLIENT_ID | Auth0 | Auth0 application client ID. |
-| AUTH0_CLIENT_SECRET | Auth0 | Auth0 application client secret. |
+| Variable                          | Provider     | Description                                                                                                                                                              |
+| --------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| VINTASEND_API_URL                 | API          | Base URL of the VintaSend API (e.g. `http://localhost:3333`).                                                                                                            |
+| VINTASEND_API_KEY                 | API          | Shared secret sent as a bearer token. Server-side only.                                                                                                                  |
+| AUTH_PROVIDER                     | Clerk, Auth0 | Selects which auth strategy to use (`clerk` or `auth0`).                                                                                                                 |
+| NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY | Clerk        | Clerk publishable key.                                                                                                                                                   |
+| CLERK_SECRET_KEY                  | Clerk        | Clerk secret key.                                                                                                                                                        |
+| AUTH0_SECRET                      | Auth0        | Session cookie encryption secret.                                                                                                                                        |
+| APP_BASE_URL                      | Auth0        | Base URL of the app (e.g. `http://localhost:3000`). **Note:** In Auth0 v4, this was renamed from `AUTH0_BASE_URL`.                                                       |
+| AUTH0_DOMAIN                      | Auth0        | Auth0 tenant domain without scheme (e.g. `example.us.auth0.com`). **Note:** In Auth0 v4, this was renamed from `AUTH0_ISSUER_BASE_URL` and no longer accepts `https://`. |
+| AUTH0_CLIENT_ID                   | Auth0        | Auth0 application client ID.                                                                                                                                             |
+| AUTH0_CLIENT_SECRET               | Auth0        | Auth0 application client secret.                                                                                                                                         |
 
 Backend credentials (database, mail provider, GitHub token for template
 previews) now belong to the API, not to this app.

@@ -73,11 +73,10 @@ describe('authentication', () => {
   it('answers 401 as JSON, not a redirect, when the session is gone', async () => {
     isAuthenticated.mockResolvedValue(false);
 
-    const response = await GET(request('/api/vintasend/api/v1/notifications'), context([
-      'api',
-      'v1',
-      'notifications',
-    ]));
+    const response = await GET(
+      request('/api/vintasend/api/v1/notifications'),
+      context(['api', 'v1', 'notifications']),
+    );
 
     expect(response.status).toBe(401);
     // A fetch cannot follow a redirect to an HTML sign-in page usefully.
@@ -88,7 +87,10 @@ describe('authentication', () => {
   });
 
   it('validates the auth configuration before trusting the answer', async () => {
-    await GET(request('/api/vintasend/api/v1/notifications'), context(['api', 'v1', 'notifications']));
+    await GET(
+      request('/api/vintasend/api/v1/notifications'),
+      context(['api', 'v1', 'notifications']),
+    );
 
     expect(assertValidAuthConfig).toHaveBeenCalled();
   });
@@ -126,14 +128,20 @@ describe('configuration', () => {
 
 describe('forwarding', () => {
   it('attaches the API key the browser never sees', async () => {
-    await GET(request('/api/vintasend/api/v1/notifications'), context(['api', 'v1', 'notifications']));
+    await GET(
+      request('/api/vintasend/api/v1/notifications'),
+      context(['api', 'v1', 'notifications']),
+    );
 
     const [, init] = forwarded();
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer secret-key');
   });
 
   it('rebuilds the upstream path from the catch-all segments', async () => {
-    await GET(request('/api/vintasend/api/v1/notifications'), context(['api', 'v1', 'notifications']));
+    await GET(
+      request('/api/vintasend/api/v1/notifications'),
+      context(['api', 'v1', 'notifications']),
+    );
 
     expect(String(forwarded()[0])).toBe('https://api.test/api/v1/notifications');
   });
@@ -167,7 +175,10 @@ describe('forwarding', () => {
   });
 
   it('never caches, so the dashboard cannot show a stale page', async () => {
-    await GET(request('/api/vintasend/api/v1/notifications'), context(['api', 'v1', 'notifications']));
+    await GET(
+      request('/api/vintasend/api/v1/notifications'),
+      context(['api', 'v1', 'notifications']),
+    );
 
     expect(forwarded()[1]).toMatchObject({ cache: 'no-store' });
   });

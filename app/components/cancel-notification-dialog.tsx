@@ -68,7 +68,8 @@ export function CancelNotificationDialog({
             Cancel Notification
           </AlertDialogTitle>
           <AlertDialogDescription>
-            This will cancel the pending notification and it will no longer be sent. This action cannot be undone.
+            This will cancel the pending notification and it will no longer be sent. This action
+            cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

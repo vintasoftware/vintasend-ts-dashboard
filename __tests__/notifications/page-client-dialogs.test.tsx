@@ -63,7 +63,9 @@ jest.mock('@/app/components/notifications-table', () => ({
     };
     return (
       <div data-testid="table">
-        <button type="button" onClick={() => p.onRowClick('notif-1')}>row</button>
+        <button type="button" onClick={() => p.onRowClick('notif-1')}>
+          row
+        </button>
         <button type="button" onClick={() => p.onSortingChange([{ id: 'sentAt', desc: true }])}>
           sort-sentAt
         </button>
@@ -73,10 +75,18 @@ jest.mock('@/app/components/notifications-table', () => ({
         <button type="button" onClick={() => p.onSortingChange([{ id: 'title', desc: false }])}>
           sort-unsupported
         </button>
-        <button type="button" onClick={() => p.onSortingChange([])}>sort-none</button>
-        <button type="button" onClick={() => p.onResend('notif-1')}>resend</button>
-        <button type="button" onClick={() => p.onPreviewRender('notif-1')}>preview</button>
-        <button type="button" onClick={() => p.onCancel('notif-1')}>cancel</button>
+        <button type="button" onClick={() => p.onSortingChange([])}>
+          sort-none
+        </button>
+        <button type="button" onClick={() => p.onResend('notif-1')}>
+          resend
+        </button>
+        <button type="button" onClick={() => p.onPreviewRender('notif-1')}>
+          preview
+        </button>
+        <button type="button" onClick={() => p.onCancel('notif-1')}>
+          cancel
+        </button>
       </div>
     );
   },
@@ -87,7 +97,9 @@ jest.mock('@/app/components/notification-detail', () => ({
     const p = props as unknown as { notificationId: string | null; onClose: () => void };
     return (
       <div data-testid="detail" data-id={p.notificationId ?? ''}>
-        <button type="button" onClick={p.onClose}>close-detail</button>
+        <button type="button" onClick={p.onClose}>
+          close-detail
+        </button>
       </div>
     );
   },
@@ -98,7 +110,9 @@ jest.mock('@/app/components/preview-render-dialog', () => ({
     const p = props as unknown as { notificationId: string | null; onClose: () => void };
     return (
       <div data-testid="preview" data-id={p.notificationId ?? ''}>
-        <button type="button" onClick={p.onClose}>close-preview</button>
+        <button type="button" onClick={p.onClose}>
+          close-preview
+        </button>
       </div>
     );
   },
@@ -109,7 +123,9 @@ jest.mock('@/app/components/resend-notification-dialog', () => ({
     const p = props as unknown as { notificationId: string | null; onClose: () => void };
     return (
       <div data-testid="resend" data-id={p.notificationId ?? ''}>
-        <button type="button" onClick={p.onClose}>close-resend</button>
+        <button type="button" onClick={p.onClose}>
+          close-resend
+        </button>
       </div>
     );
   },
@@ -124,8 +140,12 @@ jest.mock('@/app/components/cancel-notification-dialog', () => ({
     };
     return (
       <div data-testid="cancel" data-id={p.notificationId ?? ''}>
-        <button type="button" onClick={p.onClose}>close-cancel</button>
-        <button type="button" onClick={() => p.onConfirm('notif-1')}>confirm-cancel</button>
+        <button type="button" onClick={p.onClose}>
+          close-cancel
+        </button>
+        <button type="button" onClick={() => p.onConfirm('notif-1')}>
+          confirm-cancel
+        </button>
       </div>
     );
   },

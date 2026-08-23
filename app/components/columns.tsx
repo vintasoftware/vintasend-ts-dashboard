@@ -2,7 +2,15 @@
 
 import type { ColumnDef } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { ArrowUpDown, ChevronDown, Eye, FileText, HashIcon, RefreshCw, XCircle } from 'lucide-react';
+import {
+  ArrowUpDown,
+  ChevronDown,
+  Eye,
+  FileText,
+  HashIcon,
+  RefreshCw,
+  XCircle,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +33,10 @@ import type {
 /**
  * Maps notification status to badge variant colors.
  */
-const statusVariantMap: Record<NotificationStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const statusVariantMap: Record<
+  NotificationStatus,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
   PENDING_SEND: 'default',
   SENT: 'secondary',
   FAILED: 'destructive',
@@ -36,7 +47,10 @@ const statusVariantMap: Record<NotificationStatus, 'default' | 'secondary' | 'de
 /**
  * Maps notification type to badge variant colors.
  */
-const typeVariantMap: Record<NotificationType, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const typeVariantMap: Record<
+  NotificationType,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
   EMAIL: 'default',
   SMS: 'secondary',
   PUSH: 'outline',
@@ -113,7 +127,11 @@ export interface ColumnOptions {
 }
 
 function renderSortableHeader(label: string) {
-  const SortableHeader = ({ column }: { column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | 'asc' | 'desc' } }) => (
+  const SortableHeader = ({
+    column,
+  }: {
+    column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | 'asc' | 'desc' };
+  }) => (
     <Button
       variant="ghost"
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
@@ -135,110 +153,106 @@ export function createColumns(options: ColumnOptions = {}): ColumnDef<Notificati
   const { onViewDetails, onResend, onPreviewRender, onCancel } = options;
 
   const columns: ColumnDef<Notification>[] = [
-  {
-    accessorKey: 'id',
-    header: 'ID',
-    cell: ({ row }) => (
-      <span className="font-mono text-xs">
-        {row.original.id}
-      </span>
-    ),
-    size: 90,
-  },
-
-  {
-    accessorKey: 'title',
-    header: 'Title',
-    cell: ({ row }) => (
-      <span className="truncate block max-w-[10rem]" title={row.original.title || undefined}>
-        {row.original.title || '—'}
-      </span>
-    ),
-    size: 160,
-  },
-
-  {
-    accessorKey: 'notificationType',
-    header: 'Type',
-    cell: ({ row }) => {
-      const type = row.original.notificationType;
-      return <Badge variant={typeVariantMap[type]}>{type}</Badge>;
+    {
+      accessorKey: 'id',
+      header: 'ID',
+      cell: ({ row }) => <span className="font-mono text-xs">{row.original.id}</span>,
+      size: 90,
     },
-    size: 70,
-  },
 
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.original.status;
-      return <Badge variant={statusVariantMap[status]}>{status}</Badge>;
-    },
-    size: 90,
-  },
-
-  {
-    accessorKey: 'contextName',
-    header: 'Context',
-    cell: ({ row }) => (
-      <span className="truncate block max-w-[7rem]" title={row.original.contextName || undefined}>
-        {row.original.contextName || '—'}
-      </span>
-    ),
-    size: 100,
-  },
-
-  {
-    accessorKey: 'tenant',
-    header: 'Tenant',
-    cell: ({ row }) => (
-      <span className="truncate block max-w-[7rem]" title={row.original.tenant || undefined}>
-        {row.original.tenant || '—'}
-      </span>
-    ),
-    size: 100,
-  },
-
-  {
-    accessorKey: 'recipient',
-    header: 'Recipient ID',
-    cell: ({ row }) => {
-      const recipient = getRecipient(row.original);
-      return (
-        <span className="truncate block max-w-[12rem]" title={recipient}>
-          {recipient}
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ row }) => (
+        <span className="truncate block max-w-[10rem]" title={row.original.title || undefined}>
+          {row.original.title || '—'}
         </span>
-      );
+      ),
+      size: 160,
     },
-    size: 180,
-  },
 
-  {
-    accessorKey: 'sendAfter',
-    header: renderSortableHeader('Send After'),
-    cell: ({ row }) => (
-      <span className="text-xs whitespace-nowrap">{formatDate(row.original.sendAfter)}</span>
-    ),
-    size: 130,
-  },
+    {
+      accessorKey: 'notificationType',
+      header: 'Type',
+      cell: ({ row }) => {
+        const type = row.original.notificationType;
+        return <Badge variant={typeVariantMap[type]}>{type}</Badge>;
+      },
+      size: 70,
+    },
 
-  {
-    accessorKey: 'sentAt',
-    header: renderSortableHeader('Sent At'),
-    cell: ({ row }) => (
-      <span className="text-xs whitespace-nowrap">{formatDate(row.original.sentAt)}</span>
-    ),
-    size: 130,
-  },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      cell: ({ row }) => {
+        const status = row.original.status;
+        return <Badge variant={statusVariantMap[status]}>{status}</Badge>;
+      },
+      size: 90,
+    },
 
-  {
-    accessorKey: 'createdAt',
-    header: renderSortableHeader('Created At'),
-    cell: ({ row }) => (
-      <span className="text-xs whitespace-nowrap">{formatDate(row.original.createdAt)}</span>
-    ),
-    size: 130,
-  },
+    {
+      accessorKey: 'contextName',
+      header: 'Context',
+      cell: ({ row }) => (
+        <span className="truncate block max-w-[7rem]" title={row.original.contextName || undefined}>
+          {row.original.contextName || '—'}
+        </span>
+      ),
+      size: 100,
+    },
+
+    {
+      accessorKey: 'tenant',
+      header: 'Tenant',
+      cell: ({ row }) => (
+        <span className="truncate block max-w-[7rem]" title={row.original.tenant || undefined}>
+          {row.original.tenant || '—'}
+        </span>
+      ),
+      size: 100,
+    },
+
+    {
+      accessorKey: 'recipient',
+      header: 'Recipient ID',
+      cell: ({ row }) => {
+        const recipient = getRecipient(row.original);
+        return (
+          <span className="truncate block max-w-[12rem]" title={recipient}>
+            {recipient}
+          </span>
+        );
+      },
+      size: 180,
+    },
+
+    {
+      accessorKey: 'sendAfter',
+      header: renderSortableHeader('Send After'),
+      cell: ({ row }) => (
+        <span className="text-xs whitespace-nowrap">{formatDate(row.original.sendAfter)}</span>
+      ),
+      size: 130,
+    },
+
+    {
+      accessorKey: 'sentAt',
+      header: renderSortableHeader('Sent At'),
+      cell: ({ row }) => (
+        <span className="text-xs whitespace-nowrap">{formatDate(row.original.sentAt)}</span>
+      ),
+      size: 130,
+    },
+
+    {
+      accessorKey: 'createdAt',
+      header: renderSortableHeader('Created At'),
+      cell: ({ row }) => (
+        <span className="text-xs whitespace-nowrap">{formatDate(row.original.createdAt)}</span>
+      ),
+      size: 130,
+    },
 
     {
       id: 'actions',

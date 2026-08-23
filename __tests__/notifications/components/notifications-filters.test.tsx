@@ -154,7 +154,6 @@ describe('NotificationsFilters', () => {
     });
   });
 
-
   describe('select filters', () => {
     it('fires immediately when a status is picked, without waiting for the debounce', async () => {
       const user = userEvent.setup();
@@ -232,7 +231,9 @@ describe('NotificationsFilters', () => {
     });
 
     it('renders a single date when only the start of a range is known', () => {
-      render(<NotificationsFilters initialFilters={{ createdAtFrom: '2024-01-15T00:00:00.000Z' }} />);
+      render(
+        <NotificationsFilters initialFilters={{ createdAtFrom: '2024-01-15T00:00:00.000Z' }} />,
+      );
 
       expect(screen.getByText('Jan 15, 2024')).toBeInTheDocument();
     });
@@ -271,7 +272,9 @@ describe('NotificationsFilters', () => {
       const withoutRange = screen.getAllByRole('button').length;
       unmount();
 
-      render(<NotificationsFilters initialFilters={{ createdAtFrom: '2024-01-15T00:00:00.000Z' }} />);
+      render(
+        <NotificationsFilters initialFilters={{ createdAtFrom: '2024-01-15T00:00:00.000Z' }} />,
+      );
 
       expect(screen.getAllByRole('button').length).toBe(withoutRange + 1);
     });
@@ -361,10 +364,11 @@ describe('NotificationsFilters', () => {
     });
   });
 
-
   describe('staying in step with the URL', () => {
     it('adopts filters that changed outside the bar, such as the back button', () => {
-      const { rerender } = render(<NotificationsFilters initialFilters={{ adapterUsed: 'sendgrid' }} />);
+      const { rerender } = render(
+        <NotificationsFilters initialFilters={{ adapterUsed: 'sendgrid' }} />,
+      );
 
       expect(screen.getByLabelText('Adapter Used')).toHaveValue('sendgrid');
 
@@ -464,8 +468,14 @@ describe('NotificationsFilters', () => {
 
       expect(screen.getByLabelText('Adapter Used')).toHaveAttribute('placeholder', 'e.g. sendgrid');
       expect(screen.getByLabelText('Recipient ID')).toHaveAttribute('placeholder', 'Recipient ID');
-      expect(screen.getByLabelText('Body Template')).toHaveAttribute('placeholder', 'Body template name');
-      expect(screen.getByLabelText('Subject Template')).toHaveAttribute('placeholder', 'Subject template name');
+      expect(screen.getByLabelText('Body Template')).toHaveAttribute(
+        'placeholder',
+        'Body template name',
+      );
+      expect(screen.getByLabelText('Subject Template')).toHaveAttribute(
+        'placeholder',
+        'Subject template name',
+      );
       expect(screen.getByLabelText('Context')).toHaveAttribute('placeholder', 'Context');
     });
   });

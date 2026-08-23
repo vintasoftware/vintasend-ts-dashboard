@@ -41,8 +41,7 @@ jest.mock('vintasend-dashboard-core', () => {
         void Promise.resolve(mockFetchNotificationPreview(id)).then(
           (preview: unknown) =>
             setState({ isLoading: false, isError: false, data: { data: preview }, error: null }),
-          (error: unknown) =>
-            setState({ isLoading: false, isError: true, data: undefined, error }),
+          (error: unknown) => setState({ isLoading: false, isError: true, data: undefined, error }),
         );
       }, [id]);
 

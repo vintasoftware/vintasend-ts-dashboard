@@ -4,11 +4,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -101,11 +97,15 @@ export function NotificationsFilters({
   initialFilters,
 }: NotificationsFiltersProps) {
   const [status, setStatus] = useState<string>(initialFilters?.status ?? 'all');
-  const [notificationType, setNotificationType] = useState<string>(initialFilters?.notificationType ?? 'all');
+  const [notificationType, setNotificationType] = useState<string>(
+    initialFilters?.notificationType ?? 'all',
+  );
   const [adapterUsed, setAdapterUsed] = useState<string>(initialFilters?.adapterUsed ?? '');
   const [userId, setUserId] = useState<string>(initialFilters?.userId ?? '');
   const [bodyTemplate, setBodyTemplate] = useState<string>(initialFilters?.bodyTemplate ?? '');
-  const [subjectTemplate, setSubjectTemplate] = useState<string>(initialFilters?.subjectTemplate ?? '');
+  const [subjectTemplate, setSubjectTemplate] = useState<string>(
+    initialFilters?.subjectTemplate ?? '',
+  );
   const [contextName, setContextName] = useState<string>(initialFilters?.contextName ?? '');
   const [tenant, setTenant] = useState<string>(initialFilters?.tenant ?? '');
   const [createdAtRange, setCreatedAtRange] = useState<DateRange | undefined>(() =>
@@ -192,7 +192,19 @@ export function NotificationsFilters({
         }),
       );
     },
-    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, emit],
+    [
+      status,
+      notificationType,
+      adapterUsed,
+      userId,
+      bodyTemplate,
+      subjectTemplate,
+      contextName,
+      tenant,
+      createdAtRange,
+      sentAtRange,
+      emit,
+    ],
   );
 
   /**
@@ -219,13 +231,26 @@ export function NotificationsFilters({
         );
       }, 300);
     },
-    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, emit],
+    [
+      status,
+      notificationType,
+      adapterUsed,
+      userId,
+      bodyTemplate,
+      subjectTemplate,
+      contextName,
+      tenant,
+      createdAtRange,
+      sentAtRange,
+      emit,
+    ],
   );
 
-  const handleTextChange = (setter: (v: string) => void, key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setter(e.target.value);
-    debouncedFire({ [key]: e.target.value });
-  };
+  const handleTextChange =
+    (setter: (v: string) => void, key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+      setter(e.target.value);
+      debouncedFire({ [key]: e.target.value });
+    };
 
   const formatDateRange = (range: DateRange | undefined) => {
     if (!range?.from) return 'Pick a date range';
@@ -238,7 +263,10 @@ export function NotificationsFilters({
       {/* Row 1: Status, Type, Adapter */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-2">
         <div className="w-full sm:w-auto">
-          <label htmlFor="status-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="status-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Status
           </label>
           <Select
@@ -255,14 +283,19 @@ export function NotificationsFilters({
             <SelectContent>
               <SelectItem value="all">All Statuses</SelectItem>
               {NOTIFICATION_STATUSES.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="w-full sm:w-auto">
-          <label htmlFor="type-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="type-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Type
           </label>
           <Select
@@ -279,14 +312,19 @@ export function NotificationsFilters({
             <SelectContent>
               <SelectItem value="all">All Types</SelectItem>
               {NOTIFICATION_TYPES.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
+                <SelectItem key={t} value={t}>
+                  {t}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex-1 min-w-0">
-          <label htmlFor="adapter-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="adapter-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Adapter Used
           </label>
           <Input
@@ -299,7 +337,10 @@ export function NotificationsFilters({
         </div>
 
         <div className="flex-1 min-w-0">
-          <label htmlFor="user-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="user-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Recipient ID
           </label>
           <Input
@@ -315,7 +356,10 @@ export function NotificationsFilters({
       {/* Row 2: Templates & Context */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-2">
         <div className="flex-1 min-w-0">
-          <label htmlFor="body-template-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="body-template-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Body Template
           </label>
           <Input
@@ -328,7 +372,10 @@ export function NotificationsFilters({
         </div>
 
         <div className="flex-1 min-w-0">
-          <label htmlFor="subject-template-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="subject-template-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Subject Template
           </label>
           <Input
@@ -341,7 +388,10 @@ export function NotificationsFilters({
         </div>
 
         <div className="flex-1 min-w-0">
-          <label htmlFor="context-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="context-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Context
           </label>
           <Input
@@ -354,7 +404,10 @@ export function NotificationsFilters({
         </div>
 
         <div className="flex-1 min-w-0">
-          <label htmlFor="tenant-filter" className="text-sm font-medium text-muted-foreground mb-2 block">
+          <label
+            htmlFor="tenant-filter"
+            className="text-sm font-medium text-muted-foreground mb-2 block"
+          >
             Tenant
           </label>
           <Input
@@ -370,9 +423,7 @@ export function NotificationsFilters({
       {/* Row 3: Date Ranges */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-2">
         <div className="w-full sm:w-auto">
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">
-            Created At
-          </label>
+          <label className="text-sm font-medium text-muted-foreground mb-2 block">Created At</label>
           <div className="flex items-center gap-1">
             <Popover>
               <PopoverTrigger asChild>
@@ -415,9 +466,7 @@ export function NotificationsFilters({
         </div>
 
         <div className="w-full sm:w-auto">
-          <label className="text-sm font-medium text-muted-foreground mb-2 block">
-            Sent At
-          </label>
+          <label className="text-sm font-medium text-muted-foreground mb-2 block">Sent At</label>
           <div className="flex items-center gap-1">
             <Popover>
               <PopoverTrigger asChild>

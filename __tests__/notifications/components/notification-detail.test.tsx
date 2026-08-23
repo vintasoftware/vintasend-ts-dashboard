@@ -38,8 +38,7 @@ jest.mock('vintasend-dashboard-core', () => {
         return Promise.resolve(mockFetchNotificationDetail(notificationId)).then(
           (detail: unknown) =>
             setState({ isLoading: false, isError: false, data: { data: detail }, error: null }),
-          (error: unknown) =>
-            setState({ isLoading: false, isError: true, data: undefined, error }),
+          (error: unknown) => setState({ isLoading: false, isError: true, data: undefined, error }),
         );
       }, []);
 
@@ -135,9 +134,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('opens the panel when notificationId is provided', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       // Sheet should be open (check for sheet content)
       await waitFor(() => {
@@ -155,9 +152,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('calls fetchNotificationDetail with the correct ID', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(mockFetchNotificationDetail).toHaveBeenCalledWith('notif-123');
@@ -172,9 +167,7 @@ describe('NotificationDetail — Phase 6', () => {
       });
       mockFetchNotificationDetail.mockReturnValueOnce(pendingPromise);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       // Should show loading skeleton
       await waitFor(() => {
@@ -197,9 +190,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays the notification title in the header', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('Welcome Email')).toBeInTheDocument();
@@ -209,9 +200,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays the bodyTemplate content', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         const bodyTemplate = screen.getByTestId('body-template');
@@ -223,9 +212,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays the contextUsed content as JSON', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         const contextUsed = screen.getByTestId('context-used');
@@ -238,9 +225,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays status and type badges', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('EMAIL')).toBeInTheDocument();
@@ -251,9 +236,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays git commit sha when present', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('Git Commit SHA')).toBeInTheDocument();
@@ -264,9 +247,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('shows fallback when git commit sha is missing', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockOneOffNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('Git Commit SHA')).toBeInTheDocument();
@@ -277,9 +258,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays extraParams when present', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         const extraParams = screen.getByTestId('extra-params');
@@ -291,9 +270,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays one-off notification with emailOrPhone', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockOneOffNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />);
 
       await waitFor(() => {
         // Should show one-off badge
@@ -310,9 +287,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays attachments list when present', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         const attachmentsList = screen.getByTestId('attachments-list');
@@ -324,9 +299,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays attachment metadata (type, size, description)', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         const attachmentItem = screen.getByTestId('attachment-attach-1');
@@ -339,9 +312,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('shows "No attachments" when attachments array is empty', async () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockOneOffNotificationDetail);
 
-      render(
-        <NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-one-off" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('No attachments')).toBeInTheDocument();
@@ -371,7 +342,7 @@ describe('NotificationDetail — Phase 6', () => {
       mockFetchNotificationDetail.mockResolvedValueOnce(mockNotificationDetail);
 
       const { rerender } = render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
+        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />,
       );
 
       // Wait for content to load
@@ -400,9 +371,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('displays error message when fetch fails', async () => {
       mockFetchNotificationDetail.mockRejectedValueOnce(new Error('Network error'));
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByTestId('notification-detail-error')).toBeInTheDocument();
@@ -413,9 +382,7 @@ describe('NotificationDetail — Phase 6', () => {
     it('provides a retry button on error', async () => {
       mockFetchNotificationDetail.mockRejectedValueOnce(new Error('Network error'));
 
-      render(
-        <NotificationDetail notificationId="notif-123" onClose={jest.fn()} />
-      );
+      render(<NotificationDetail notificationId="notif-123" onClose={jest.fn()} />);
 
       await waitFor(() => {
         expect(screen.getByText('Retry')).toBeInTheDocument();

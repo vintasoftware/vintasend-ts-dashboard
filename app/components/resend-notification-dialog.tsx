@@ -112,7 +112,8 @@ export function ResendNotificationDialog({
                 <div>
                   <div className="text-sm font-medium">Recalculate context</div>
                   <div className="text-xs text-muted-foreground">
-                    Generate fresh context from the current database state. Use this if the underlying data has changed since the original notification was sent.
+                    Generate fresh context from the current database state. Use this if the
+                    underlying data has changed since the original notification was sent.
                   </div>
                 </div>
               </label>
@@ -130,7 +131,8 @@ export function ResendNotificationDialog({
                 <div>
                   <div className="text-sm font-medium">Use stored context</div>
                   <div className="text-xs text-muted-foreground">
-                    Reuse the exact context from the original notification. Use this to send the same content again without any changes.
+                    Reuse the exact context from the original notification. Use this to send the
+                    same content again without any changes.
                   </div>
                 </div>
               </label>

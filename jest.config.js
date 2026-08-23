@@ -22,8 +22,7 @@ const customJestConfig = {
     // turn them into CommonJS.
     '^vintasend-dashboard-core/next$':
       '<rootDir>/node_modules/vintasend-dashboard-core/dist/next/index.js',
-    '^vintasend-dashboard-core$':
-      '<rootDir>/node_modules/vintasend-dashboard-core/dist/index.js',
+    '^vintasend-dashboard-core$': '<rootDir>/node_modules/vintasend-dashboard-core/dist/index.js',
 
     // The core declares `react` and `next` as peer dependencies but installs
     // its own copies as devDependencies. Once it is linked from the sibling

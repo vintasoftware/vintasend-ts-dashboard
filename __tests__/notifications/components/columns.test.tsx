@@ -55,13 +55,7 @@ const oneOffNotification = (overrides: Partial<Notification> = {}): Notification
 
 const renderTable = (data: Notification[], options: Record<string, unknown> = {}) =>
   render(
-    <NotificationsTable
-      data={data}
-      hasMore={false}
-      currentPage={1}
-      pageSize={20}
-      {...options}
-    />,
+    <NotificationsTable data={data} hasMore={false} currentPage={1} pageSize={20} {...options} />,
   );
 
 const openMenu = async (user: ReturnType<typeof userEvent.setup>) => {

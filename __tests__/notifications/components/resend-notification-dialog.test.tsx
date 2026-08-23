@@ -33,7 +33,9 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ResendNotificationDialog } from '@/app/components/resend-notification-dialog';
 
-const renderDialog = (props: Partial<React.ComponentProps<typeof ResendNotificationDialog>> = {}) => {
+const renderDialog = (
+  props: Partial<React.ComponentProps<typeof ResendNotificationDialog>> = {},
+) => {
   const onClose = jest.fn();
   const onResent = jest.fn();
   const result = render(

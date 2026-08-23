@@ -31,8 +31,8 @@ export default function NotificationsError({ error, reset }: ErrorProps) {
                 Failed to load notifications
               </h2>
               <p className="text-sm text-muted-foreground mb-4">
-                An error occurred while fetching your notifications. This might be temporary.
-                Please try again or contact support if the problem persists.
+                An error occurred while fetching your notifications. This might be temporary. Please
+                try again or contact support if the problem persists.
               </p>
 
               {/* Error Details (Development only) */}
@@ -49,11 +49,7 @@ export default function NotificationsError({ error, reset }: ErrorProps) {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 mt-6">
-                <Button
-                  onClick={() => reset()}
-                  className="gap-2"
-                  variant="default"
-                >
+                <Button onClick={() => reset()} className="gap-2" variant="default">
                   <RotateCcw className="h-4 w-4" />
                   Try Again
                 </Button>

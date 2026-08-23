@@ -50,20 +50,16 @@ export function TopNavbar() {
         {/* User Menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className="gap-2 rounded-full"
-              title={displayName}
-            >
-                {user.imageUrl && (
-                    <Image
-                        src={user.imageUrl}
-                        alt={user.name || "User avatar"}
-                        className="w-8 h-8 rounded-full"
-                        width={32}
-                        height={32}
-                    />
-                )}
+            <Button variant="ghost" className="gap-2 rounded-full" title={displayName}>
+              {user.imageUrl && (
+                <Image
+                  src={user.imageUrl}
+                  alt={user.name || 'User avatar'}
+                  className="w-8 h-8 rounded-full"
+                  width={32}
+                  height={32}
+                />
+              )}
               <span className="hidden sm:inline text-sm">{displayName}</span>
             </Button>
           </DropdownMenuTrigger>

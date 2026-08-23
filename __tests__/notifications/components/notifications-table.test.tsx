@@ -89,7 +89,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       // Get all table body rows (excluding header)
@@ -104,7 +104,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       expect(screen.getByText('1')).toBeInTheDocument();
@@ -119,7 +119,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       expect(screen.getByText('Welcome Email')).toBeInTheDocument();
@@ -133,7 +133,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       // The third notification has null title, should display "—"
@@ -142,14 +142,7 @@ describe('NotificationsTable — Phase 3', () => {
     });
 
     it('shows empty state when no data', () => {
-      render(
-        <NotificationsTable
-          data={[]}
-          hasMore={false}
-          currentPage={1}
-          pageSize={10}
-        />
-      );
+      render(<NotificationsTable data={[]} hasMore={false} currentPage={1} pageSize={10} />);
 
       expect(screen.getByText('No notifications found.')).toBeInTheDocument();
     });
@@ -163,7 +156,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       expect(screen.getByText('SENT')).toBeInTheDocument();
@@ -178,7 +171,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       expect(screen.getByText('EMAIL')).toBeInTheDocument();
@@ -196,7 +189,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={1}
           pageSize={10}
           onPaginationChange={jest.fn()}
-        />
+        />,
       );
 
       // Look for page indicator
@@ -210,7 +203,7 @@ describe('NotificationsTable — Phase 3', () => {
           hasMore={false}
           currentPage={1}
           pageSize={10}
-        />
+        />,
       );
 
       // Only one page, so pagination controls should not be rendered
@@ -229,7 +222,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={1}
           pageSize={10}
           onPaginationChange={handlePaginationChange}
-        />
+        />,
       );
 
       // Find and click the Next button
@@ -252,7 +245,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={3}
           pageSize={10}
           onPaginationChange={handlePaginationChange}
-        />
+        />,
       );
 
       const buttons = screen.getAllByRole('button');
@@ -271,7 +264,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={3}
           pageSize={10}
           onPaginationChange={jest.fn()}
-        />
+        />,
       );
 
       const buttons = screen.getAllByRole('button');
@@ -288,7 +281,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={1}
           pageSize={10}
           onPaginationChange={jest.fn()}
-        />
+        />,
       );
 
       const buttons = screen.getAllByRole('button');
@@ -307,7 +300,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={1}
           pageSize={10}
           isLoading={true}
-        />
+        />,
       );
 
       // Check for skeleton elements (div with h-4 w-full classes)
@@ -324,7 +317,7 @@ describe('NotificationsTable — Phase 3', () => {
           pageSize={10}
           isLoading={true}
           onPaginationChange={jest.fn()}
-        />
+        />,
       );
 
       const buttons = screen.getAllByRole('button');
@@ -344,7 +337,7 @@ describe('NotificationsTable — Phase 3', () => {
           currentPage={1}
           pageSize={10}
           isLoading={false}
-        />
+        />,
       );
 
       // Should display notification text, not skeletons
@@ -354,7 +347,6 @@ describe('NotificationsTable — Phase 3', () => {
       expect(skeletons).toHaveLength(0);
     });
   });
-
 
   describe('3.6: Row selection and sorting', () => {
     it('calls onRowClick with the notification id when a row is clicked', async () => {
@@ -415,9 +407,7 @@ describe('NotificationsTable — Phase 3', () => {
       // which is the branch the container has to resolve against current state.
       await user.click(screen.getByRole('button', { name: /Created At/i }));
 
-      expect(onSortingChange).toHaveBeenCalledWith([
-        expect.objectContaining({ id: 'createdAt' }),
-      ]);
+      expect(onSortingChange).toHaveBeenCalledWith([expect.objectContaining({ id: 'createdAt' })]);
     });
 
     it('resolves the updater against the sort already in the URL', async () => {
@@ -438,9 +428,7 @@ describe('NotificationsTable — Phase 3', () => {
 
       await user.click(screen.getByRole('button', { name: /Created At/i }));
 
-      expect(onSortingChange).toHaveBeenCalledWith([
-        { id: 'createdAt', desc: true },
-      ]);
+      expect(onSortingChange).toHaveBeenCalledWith([{ id: 'createdAt', desc: true }]);
     });
   });
 
@@ -530,9 +518,12 @@ describe('NotificationsTable — Phase 3', () => {
         />,
       );
 
-      const firstRowActionButton = within(screen.getByTestId('notification-row-1')).getByRole('button', {
-        name: /open menu/i,
-      });
+      const firstRowActionButton = within(screen.getByTestId('notification-row-1')).getByRole(
+        'button',
+        {
+          name: /open menu/i,
+        },
+      );
       await user.click(firstRowActionButton);
       expect(screen.queryByTestId('cancel-1')).not.toBeInTheDocument();
 
@@ -548,9 +539,12 @@ describe('NotificationsTable — Phase 3', () => {
         />,
       );
 
-      const secondRowActionButton = within(screen.getByTestId('notification-row-0')).getByRole('button', {
-        name: /open menu/i,
-      });
+      const secondRowActionButton = within(screen.getByTestId('notification-row-0')).getByRole(
+        'button',
+        {
+          name: /open menu/i,
+        },
+      );
       await user.click(secondRowActionButton);
       expect(await screen.findByTestId('cancel-2')).toBeInTheDocument();
     });

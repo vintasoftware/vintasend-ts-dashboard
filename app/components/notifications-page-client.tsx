@@ -72,10 +72,7 @@ export function NotificationsPageClient() {
     (sorting: SortingState) => {
       const [first] = sorting;
 
-      if (
-        !first ||
-        !NOTIFICATION_ORDER_BY_FIELDS.includes(first.id as NotificationOrderByField)
-      ) {
+      if (!first || !NOTIFICATION_ORDER_BY_FIELDS.includes(first.id as NotificationOrderByField)) {
         setSort();
         return;
       }
@@ -120,9 +117,7 @@ export function NotificationsPageClient() {
             className="rounded-lg border border-destructive/50 bg-destructive/10 p-6"
             data-testid="notifications-error"
           >
-            <h2 className="font-semibold text-destructive mb-2">
-              Failed to load notifications
-            </h2>
+            <h2 className="font-semibold text-destructive mb-2">Failed to load notifications</h2>
             <p className="text-sm text-muted-foreground mb-4">{getApiErrorMessage(error)}</p>
             <button
               type="button"

@@ -49,13 +49,15 @@ const statusVariantMap: Record<
 /**
  * Maps notification type to badge variant colors.
  */
-const typeVariantMap: Record<NotificationType, 'default' | 'secondary' | 'destructive' | 'outline'> =
-  {
-    EMAIL: 'default',
-    SMS: 'secondary',
-    PUSH: 'outline',
-    IN_APP: 'default',
-  };
+const typeVariantMap: Record<
+  NotificationType,
+  'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+  EMAIL: 'default',
+  SMS: 'secondary',
+  PUSH: 'outline',
+  IN_APP: 'default',
+};
 
 /**
  * Formats a date string (ISO format) for display.
@@ -94,9 +96,7 @@ function formatTemplateVersion(
 /**
  * Determines if a notification is one-off (has emailOrPhone instead of userId).
  */
-function isOneOff(
-  notification: NotificationDetail,
-): notification is OneOffNotificationDetail {
+function isOneOff(notification: NotificationDetail): notification is OneOffNotificationDetail {
   return notification.kind === 'one-off';
 }
 
@@ -300,7 +300,7 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
         <div className="grid grid-cols-2 gap-4">
           <DetailField label="ID" value={notification.id} monospace />
           <DetailField label="Context" value={notification.contextName || '—'} />
-          
+
           {isOneOff(notification) ? (
             <>
               <DetailField label="Email/Phone" value={notification.emailOrPhone} />

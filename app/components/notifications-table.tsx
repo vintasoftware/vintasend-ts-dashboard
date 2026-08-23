@@ -2,11 +2,7 @@
 'use no memo';
 
 import type { Cell, Row, SortingState } from '@tanstack/react-table';
-import {
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -22,7 +18,6 @@ import {
 import type { Notification } from 'vintasend-dashboard-core';
 import { createColumns, columns as defaultColumns } from './columns';
 
-
 type SkeletonRow = {
   id: string;
   original: null;
@@ -30,9 +25,9 @@ type SkeletonRow = {
 };
 
 type DataRow = Row<Notification> & {
-    id: string;
-    original: Notification;
-    isSkeleton: false;
+  id: string;
+  original: Notification;
+  isSkeleton: false;
 };
 
 interface NotificationsTableProps {
@@ -113,9 +108,10 @@ export function NotificationsTable({
   };
 
   // Create columns with action callbacks
-  const columns = (onRowClick || onResend || onPreviewRender || onCancel)
-    ? createColumns({ onViewDetails: onRowClick, onResend, onPreviewRender, onCancel })
-    : defaultColumns;
+  const columns =
+    onRowClick || onResend || onPreviewRender || onCancel
+      ? createColumns({ onViewDetails: onRowClick, onResend, onPreviewRender, onCancel })
+      : defaultColumns;
 
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -157,7 +153,9 @@ export function NotificationsTable({
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <TableHead key={header.id} className="py-2 px-3 text-xs">
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -166,7 +164,10 @@ export function NotificationsTable({
           <TableBody>
             {displayRows.length === 0 && !isLoading ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                <TableCell
+                  colSpan={columns.length}
+                  className="h-24 text-center text-muted-foreground"
+                >
                   No notifications found.
                 </TableCell>
               </TableRow>
@@ -175,28 +176,28 @@ export function NotificationsTable({
                 <TableRow
                   key={row.id}
                   data-testid={`notification-row-${row.id}`}
-                  className={onRowClick && !row.isSkeleton ? 'cursor-pointer hover:bg-muted/50' : ''}
+                  className={
+                    onRowClick && !row.isSkeleton ? 'cursor-pointer hover:bg-muted/50' : ''
+                  }
                   onClick={() => {
                     if (onRowClick && !row.isSkeleton) {
                       onRowClick(row.original.id);
                     }
                   }}
                 >
-                  {row.isSkeleton ? (
-                    // Skeleton row
-                    Array.from({ length: columns.length }).map((_, i) => (
-                      <TableCell key={`${row.id}-skeleton-${i}`} className="py-2 px-3">
-                        <Skeleton className="h-4 w-full" />
-                      </TableCell>
-                    ))
-                  ) : (
-                    // Normal row
-                    row.getVisibleCells().map((cell: Cell<Notification, unknown>) => (
-                      <TableCell key={cell.id} className="py-2 px-3">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))
-                  )}
+                  {row.isSkeleton
+                    ? // Skeleton row
+                      Array.from({ length: columns.length }).map((_, i) => (
+                        <TableCell key={`${row.id}-skeleton-${i}`} className="py-2 px-3">
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      ))
+                    : // Normal row
+                      row.getVisibleCells().map((cell: Cell<Notification, unknown>) => (
+                        <TableCell key={cell.id} className="py-2 px-3">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      ))}
                 </TableRow>
               ))
             )}
@@ -207,9 +208,7 @@ export function NotificationsTable({
       {/* Pagination Controls */}
       {(currentPage > 1 || hasMore) && (
         <div className="flex items-center justify-between px-2">
-          <div className="text-sm text-muted-foreground">
-            Page {currentPage}
-          </div>
+          <div className="text-sm text-muted-foreground">Page {currentPage}</div>
           <div className="flex gap-2">
             <Button
               variant="outline"

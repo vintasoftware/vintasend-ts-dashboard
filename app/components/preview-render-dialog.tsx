@@ -53,8 +53,7 @@ function RenderedHtmlBlock({
         data-testid={testId}
         className="bg-background border border-border rounded-md p-3 text-sm overflow-x-auto max-h-72 whitespace-pre-wrap break-all"
         dangerouslySetInnerHTML={{ __html: html }}
-      >
-      </div>
+      ></div>
     </div>
   );
 }
@@ -146,7 +145,8 @@ export function PreviewRenderDialog({ notificationId, onClose }: PreviewRenderDi
             Preview render
           </AlertDialogTitle>
           <AlertDialogDescription>
-            Displays rendered HTML generated with template files fetched from GitHub at the notification&apos;s tracked commit.
+            Displays rendered HTML generated with template files fetched from GitHub at the
+            notification&apos;s tracked commit.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

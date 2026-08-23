@@ -57,9 +57,13 @@ export function NotificationsLoadingFallback() {
             </thead>
             <tbody>
               {Array.from({ length: 10 }).map((_, i) => (
-                <tr key={`skeleton-row-${// biome-ignore lint/suspicious/noArrayIndexKey: This is a static skeleton list, not dynamic data
-                  i
-                }`} className="border-b hover:bg-muted/50">
+                <tr
+                  key={`skeleton-row-${
+                    // biome-ignore lint/suspicious/noArrayIndexKey: This is a static skeleton list, not dynamic data
+                    i
+                  }`}
+                  className="border-b hover:bg-muted/50"
+                >
                   <td className="px-4 py-3">
                     <Skeleton className="h-4 w-20" />
                   </td>

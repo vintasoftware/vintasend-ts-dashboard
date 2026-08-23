@@ -113,7 +113,7 @@ export interface ColumnOptions {
 }
 
 function renderSortableHeader(label: string) {
-  return ({ column }: { column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | 'asc' | 'desc' } }) => (
+  const SortableHeader = ({ column }: { column: { toggleSorting: (desc?: boolean) => void; getIsSorted: () => false | 'asc' | 'desc' } }) => (
     <Button
       variant="ghost"
       onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
@@ -123,6 +123,8 @@ function renderSortableHeader(label: string) {
       <ArrowUpDown className="ml-1 h-3 w-3" />
     </Button>
   );
+  SortableHeader.displayName = `SortableHeader(${label})`;
+  return SortableHeader;
 }
 
 /**

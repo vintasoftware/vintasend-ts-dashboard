@@ -98,6 +98,33 @@ describe('collection actions', () => {
 
     expect(mockedApi[method]).toHaveBeenCalledWith(3, 10);
   });
+
+  it.each([
+    [fetchPendingNotifications, 'listPendingNotifications', 'pending notifications'],
+    [fetchFutureNotifications, 'listFutureNotifications', 'future notifications'],
+    [fetchOneOffNotifications, 'listOneOffNotifications', 'one-off notifications'],
+  ] as const)('wraps failures from %s', async (action, method, label) => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mockedApi[method].mockRejectedValue(new Error('upstream exploded'));
+
+    await expect(action(1, 20)).rejects.toThrow(
+      `Failed to fetch ${label}: upstream exploded`,
+    );
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
+  it('falls back to a generic message when a non-Error value is thrown', async () => {
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    // A rejected promise carrying a string still has to produce a readable
+    // message rather than "undefined" in the error boundary.
+    mockedApi.listPendingNotifications.mockRejectedValue('socket hang up');
+
+    await expect(fetchPendingNotifications(1, 20)).rejects.toThrow(
+      'Failed to fetch pending notifications: Unknown error',
+    );
+    consoleError.mockRestore();
+  });
 });
 
 describe('fetchNotificationDetail', () => {

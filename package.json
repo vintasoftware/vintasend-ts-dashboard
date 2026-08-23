@@ -1,7 +1,7 @@
 {
   "name": "vintasend-dashboard",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0-alpha1",
+  "private": false,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

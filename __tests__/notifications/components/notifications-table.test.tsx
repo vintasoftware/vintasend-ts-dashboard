@@ -355,6 +355,95 @@ describe('NotificationsTable — Phase 3', () => {
     });
   });
 
+
+  describe('3.6: Row selection and sorting', () => {
+    it('calls onRowClick with the notification id when a row is clicked', async () => {
+      const onRowClick = jest.fn();
+      const user = userEvent.setup();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={20}
+          onRowClick={onRowClick}
+        />,
+      );
+
+      await user.click(screen.getByTestId('notification-row-0'));
+
+      expect(onRowClick).toHaveBeenCalledWith('1');
+    });
+
+    it('does not call onRowClick for a skeleton row while loading', async () => {
+      const onRowClick = jest.fn();
+      const user = userEvent.setup();
+
+      const { container } = render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={20}
+          isLoading
+          onRowClick={onRowClick}
+        />,
+      );
+
+      const firstRow = container.querySelector('tbody tr') as HTMLElement;
+      await user.click(firstRow);
+
+      expect(onRowClick).not.toHaveBeenCalled();
+    });
+
+    it('reports a sort when a sortable header is clicked', async () => {
+      const onSortingChange = jest.fn();
+      const user = userEvent.setup();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={20}
+          onSortingChange={onSortingChange}
+        />,
+      );
+
+      // TanStack passes an updater function rather than a plain array here,
+      // which is the branch the container has to resolve against current state.
+      await user.click(screen.getByRole('button', { name: /Created At/i }));
+
+      expect(onSortingChange).toHaveBeenCalledWith([
+        expect.objectContaining({ id: 'createdAt' }),
+      ]);
+    });
+
+    it('resolves the updater against the sort already in the URL', async () => {
+      const onSortingChange = jest.fn();
+      const user = userEvent.setup();
+
+      render(
+        <NotificationsTable
+          data={mockNotifications}
+          hasMore={false}
+          currentPage={1}
+          pageSize={20}
+          orderByField="createdAt"
+          orderByDirection="asc"
+          onSortingChange={onSortingChange}
+        />,
+      );
+
+      await user.click(screen.getByRole('button', { name: /Created At/i }));
+
+      expect(onSortingChange).toHaveBeenCalledWith([
+        { id: 'createdAt', desc: true },
+      ]);
+    });
+  });
+
   describe('Phase 7: Preview render action', () => {
     it('calls onPreviewRender when clicking Preview render in the actions menu', async () => {
       const user = userEvent.setup();

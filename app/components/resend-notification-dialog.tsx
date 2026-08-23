@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { getApiErrorMessage, useResendNotification } from 'vintasend-dashboard-core';
 
 import {
   AlertDialog,
@@ -15,7 +16,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
-import { resendNotification } from '../actions';
 
 interface ResendNotificationDialogProps {
   /**
@@ -29,7 +29,9 @@ interface ResendNotificationDialogProps {
   onClose: () => void;
 
   /**
-   * Callback fired after a successful resend, with the new notification ID.
+   * Callback fired after a successful resend. The notification lists refresh
+   * themselves — the mutation invalidates them — so this is only for a caller
+   * that needs to do something else as well.
    */
   onResent?: () => void;
 }
@@ -44,24 +46,29 @@ export function ResendNotificationDialog({
   onResent,
 }: ResendNotificationDialogProps) {
   const [useStoredContext, setUseStoredContext] = useState(false);
-  const [isPending, startTransition] = useTransition();
+
+  // Invalidates every notification list on success, so the table behind the
+  // dialog picks up the new row without this component refetching anything.
+  const resend = useResendNotification();
+  const isPending = resend.isPending;
 
   const isOpen = notificationId !== null;
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!notificationId) return;
 
-    startTransition(async () => {
-      const result = await resendNotification(notificationId, useStoredContext);
+    try {
+      const result = await resend.mutateAsync({
+        params: { path: { id: notificationId } },
+        body: { useStoredContext },
+      });
 
-      if (result.success) {
-        toast.success(`Notification resent successfully (new ID: ${result.notification.id})`);
-        onResent?.();
-        onClose();
-      } else {
-        toast.error(`Failed to resend notification: ${result.error}`);
-      }
-    });
+      toast.success(`Notification resent successfully (new ID: ${result.data.id})`);
+      onResent?.();
+      onClose();
+    } catch (error) {
+      toast.error(`Failed to resend notification: ${getApiErrorMessage(error)}`);
+    }
   };
 
   const handleOpenChange = (open: boolean) => {

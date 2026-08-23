@@ -16,23 +16,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type {
-  NotificationFilters,
-  NotificationStatus,
-  NotificationType,
-} from '@/lib/notifications/types';
+import {
+  NOTIFICATION_STATUSES,
+  NOTIFICATION_TYPES,
+  type NotificationFilters,
+  type NotificationStatus,
+  type NotificationType,
+} from 'vintasend-dashboard-core';
 import { CalendarIcon, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { type DateRange } from 'react-day-picker';
+
+/**
+ * Builds the calendar's range value from the two ISO bounds the filter uses.
+ * Returns undefined when neither bound is set, which is what the date picker
+ * treats as "no range chosen".
+ */
+function toDateRange(from?: string, to?: string): DateRange | undefined {
+  if (!from && !to) return undefined;
+
+  return {
+    from: from ? new Date(from) : undefined,
+    to: to ? new Date(to) : undefined,
+  };
+}
 
 interface NotificationsFiltersProps {
   onFiltersChange?: (filters: NotificationFilters) => void;
   isLoading?: boolean;
   initialFilters?: NotificationFilters;
 }
-
-const NOTIFICATION_STATUSES: NotificationStatus[] = ['PENDING_SEND', 'SENT', 'FAILED', 'READ', 'CANCELLED'];
-const NOTIFICATION_TYPES: NotificationType[] = ['EMAIL', 'SMS', 'PUSH', 'IN_APP'];
 
 /**
  * Builds a NotificationFilters object from the current filter state.
@@ -95,20 +108,12 @@ export function NotificationsFilters({
   const [subjectTemplate, setSubjectTemplate] = useState<string>(initialFilters?.subjectTemplate ?? '');
   const [contextName, setContextName] = useState<string>(initialFilters?.contextName ?? '');
   const [tenant, setTenant] = useState<string>(initialFilters?.tenant ?? '');
-  const [createdAtRange, setCreatedAtRange] = useState<DateRange | undefined>(() => {
-    if (!initialFilters?.createdAtFrom && !initialFilters?.createdAtTo) return undefined;
-    return {
-      from: initialFilters?.createdAtFrom ? new Date(initialFilters.createdAtFrom) : undefined,
-      to: initialFilters?.createdAtTo ? new Date(initialFilters.createdAtTo) : undefined,
-    };
-  });
-  const [sentAtRange, setSentAtRange] = useState<DateRange | undefined>(() => {
-    if (!initialFilters?.sentAtFrom && !initialFilters?.sentAtTo) return undefined;
-    return {
-      from: initialFilters?.sentAtFrom ? new Date(initialFilters.sentAtFrom) : undefined,
-      to: initialFilters?.sentAtTo ? new Date(initialFilters.sentAtTo) : undefined,
-    };
-  });
+  const [createdAtRange, setCreatedAtRange] = useState<DateRange | undefined>(() =>
+    toDateRange(initialFilters?.createdAtFrom, initialFilters?.createdAtTo),
+  );
+  const [sentAtRange, setSentAtRange] = useState<DateRange | undefined>(() =>
+    toDateRange(initialFilters?.sentAtFrom, initialFilters?.sentAtTo),
+  );
 
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -122,12 +127,56 @@ export function NotificationsFilters({
   }, []);
 
   /**
+   * The URL owns the filter state, so it can change without this bar doing
+   * anything: the back button, a shared link, the parent's "clear filters".
+   * Local state exists only to keep the text inputs responsive ahead of the
+   * debounce, so it is re-seeded whenever the incoming filters are not simply
+   * the ones this component just emitted — otherwise every keystroke would
+   * round-trip through the URL and overwrite what is still being typed.
+   */
+  const externalFilters = JSON.stringify(initialFilters ?? {});
+  // State, not a ref: this is read during render to decide whether an incoming
+  // change is genuinely external, and reading a ref there is not safe.
+  const [lastEmitted, setLastEmitted] = useState<string | null>(null);
+  const [syncedFilters, setSyncedFilters] = useState(externalFilters);
+
+  // Adjusting state during render rather than in an effect: React re-renders
+  // immediately with the new values and never commits the stale ones, so the
+  // inputs do not flash the previous filter set on the way to the new one.
+  if (externalFilters !== syncedFilters) {
+    setSyncedFilters(externalFilters);
+
+    if (externalFilters !== lastEmitted) {
+      const next: NotificationFilters = JSON.parse(externalFilters);
+
+      setStatus(next.status ?? 'all');
+      setNotificationType(next.notificationType ?? 'all');
+      setAdapterUsed(next.adapterUsed ?? '');
+      setUserId(next.userId ?? '');
+      setBodyTemplate(next.bodyTemplate ?? '');
+      setSubjectTemplate(next.subjectTemplate ?? '');
+      setContextName(next.contextName ?? '');
+      setTenant(next.tenant ?? '');
+      setCreatedAtRange(toDateRange(next.createdAtFrom, next.createdAtTo));
+      setSentAtRange(toDateRange(next.sentAtFrom, next.sentAtTo));
+    }
+  }
+
+  const emit = useCallback(
+    (filters: NotificationFilters) => {
+      setLastEmitted(JSON.stringify(filters));
+      onFiltersChange?.(filters);
+    },
+    [onFiltersChange],
+  );
+
+  /**
    * Fires onFiltersChange immediately with current state + overrides.
    */
   const fireImmediately = useCallback(
     (overrides: Partial<Parameters<typeof collectFilters>[0]> = {}) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-      onFiltersChange?.(
+      emit(
         collectFilters({
           status,
           notificationType,
@@ -143,7 +192,7 @@ export function NotificationsFilters({
         }),
       );
     },
-    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, onFiltersChange],
+    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, emit],
   );
 
   /**
@@ -153,7 +202,7 @@ export function NotificationsFilters({
     (overrides: Partial<Parameters<typeof collectFilters>[0]>) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = setTimeout(() => {
-        onFiltersChange?.(
+        emit(
           collectFilters({
             status,
             notificationType,
@@ -170,7 +219,7 @@ export function NotificationsFilters({
         );
       }, 300);
     },
-    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, onFiltersChange],
+    [status, notificationType, adapterUsed, userId, bodyTemplate, subjectTemplate, contextName, tenant, createdAtRange, sentAtRange, emit],
   );
 
   const handleTextChange = (setter: (v: string) => void, key: string) => (e: React.ChangeEvent<HTMLInputElement>) => {

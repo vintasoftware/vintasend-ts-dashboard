@@ -13,10 +13,23 @@ const createJestConfig = nextJest({
 // Add any custom config to be passed to Jest
 const customJestConfig = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  testEnvironment: 'jest-environment-jsdom',
+  testEnvironment: '<rootDir>/jest.environment.js',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    // vintasend-dashboard-core is ESM-only: its exports map offers an `import`
+    // condition and nothing else, which Jest's CommonJS resolver cannot follow.
+    // Point it straight at the built entry points and let the transform below
+    // turn them into CommonJS.
+    '^vintasend-dashboard-core/next$':
+      '<rootDir>/node_modules/vintasend-dashboard-core/dist/next/index.js',
+    '^vintasend-dashboard-core$':
+      '<rootDir>/node_modules/vintasend-dashboard-core/dist/index.js',
   },
+
+  // The package is ESM, so it also has to be transformed. That is driven by
+  // `transpilePackages` in next.config.ts, which next/jest reads when it builds
+  // the transform ignore list; its own dependencies (openapi-fetch,
+  // openapi-react-query) each publish a CommonJS build and resolve normally.
   testMatch: ['**/__tests__/**/*.test.{ts,tsx}', '**/*.test.{ts,tsx}'],
 
   // Radix dialogs, react-day-picker and the debounced filter bar are slow to

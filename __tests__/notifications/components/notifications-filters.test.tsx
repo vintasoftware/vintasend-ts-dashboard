@@ -361,6 +361,91 @@ describe('NotificationsFilters', () => {
     });
   });
 
+
+  describe('staying in step with the URL', () => {
+    it('adopts filters that changed outside the bar, such as the back button', () => {
+      const { rerender } = render(<NotificationsFilters initialFilters={{ adapterUsed: 'sendgrid' }} />);
+
+      expect(screen.getByLabelText('Adapter Used')).toHaveValue('sendgrid');
+
+      rerender(
+        <NotificationsFilters
+          initialFilters={{ adapterUsed: 'mailgun', status: 'FAILED', userId: 'user-9' }}
+        />,
+      );
+
+      expect(screen.getByLabelText('Adapter Used')).toHaveValue('mailgun');
+      expect(screen.getByLabelText('Recipient ID')).toHaveValue('user-9');
+      expect(screen.getByTestId('status-select')).toHaveTextContent('FAILED');
+    });
+
+    it('clears the inputs when the filters are reset from outside', () => {
+      const { rerender } = render(
+        <NotificationsFilters
+          initialFilters={{
+            adapterUsed: 'sendgrid',
+            bodyTemplate: 'body.pug',
+            subjectTemplate: 'subject.pug',
+            contextName: 'welcome',
+            tenant: 'acme',
+            notificationType: 'EMAIL',
+            createdAtFrom: '2024-01-15T00:00:00.000Z',
+            sentAtFrom: '2024-02-01T00:00:00.000Z',
+          }}
+        />,
+      );
+
+      rerender(<NotificationsFilters initialFilters={{}} />);
+
+      expect(screen.getByLabelText('Adapter Used')).toHaveValue('');
+      expect(screen.getByLabelText('Body Template')).toHaveValue('');
+      expect(screen.getByLabelText('Subject Template')).toHaveValue('');
+      expect(screen.getByLabelText('Context')).toHaveValue('');
+      expect(screen.getByLabelText('Tenant')).toHaveValue('');
+      expect(screen.getByTestId('type-select')).toHaveTextContent('All Types');
+      expect(screen.getAllByText('Pick a date range')).toHaveLength(2);
+    });
+
+    it('does not re-seed when the incoming filters are the ones it just emitted', async () => {
+      jest.useFakeTimers();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onFiltersChange = jest.fn();
+
+      const { rerender } = render(
+        <NotificationsFilters onFiltersChange={onFiltersChange} initialFilters={{}} />,
+      );
+
+      await user.type(screen.getByLabelText('Adapter Used'), 'send');
+      act(() => {
+        jest.advanceTimersByTime(DEBOUNCE_MS);
+      });
+
+      // The parent writes the emitted filters to the URL and hands them back.
+      rerender(
+        <NotificationsFilters
+          onFiltersChange={onFiltersChange}
+          initialFilters={{ adapterUsed: 'send' }}
+        />,
+      );
+
+      // Meanwhile the user has kept typing; the round trip must not truncate it.
+      await user.type(screen.getByLabelText('Adapter Used'), 'grid');
+      expect(screen.getByLabelText('Adapter Used')).toHaveValue('sendgrid');
+
+      jest.useRealTimers();
+    });
+
+    it('ignores a rerender that changes nothing', () => {
+      const filters = { adapterUsed: 'sendgrid' };
+      const { rerender } = render(<NotificationsFilters initialFilters={filters} />);
+
+      // A new object with the same contents must not reset the field.
+      rerender(<NotificationsFilters initialFilters={{ adapterUsed: 'sendgrid' }} />);
+
+      expect(screen.getByLabelText('Adapter Used')).toHaveValue('sendgrid');
+    });
+  });
+
   describe('loading and accessibility', () => {
     it('disables all controls when isLoading=true', () => {
       render(<NotificationsFilters isLoading />);

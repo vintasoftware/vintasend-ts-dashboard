@@ -12,15 +12,30 @@ reads and writes everything through the API's HTTP contract. Any implementation
 of that contract can serve this UI — including one built on the Python
 `vintasend` package.
 
+Everything that is not user interface comes from
+[`vintasend-dashboard-core`](https://github.com/vintasoftware/vintasend-dashboard-core):
+the typed client generated from `openapi.yaml`, the TanStack Query hooks over
+it, and the notification filters that live in the URL. **This repository is
+meant to be read as an example.** If you want a dashboard with your own design
+system, inside your own admin app, you install that package and replace the
+components here — not the data layer.
+
 ```
-┌─────────────────────┐   HTTPS + API key    ┌──────────────────┐
-│  This dashboard     │ ───────────────────▶ │  vintasend-api   │
-│  (Clerk / Auth0)    │ ◀─────────────────── │  + your backend  │
-└─────────────────────┘     JSON contract    └──────────────────┘
+   browser                   this app's server              elsewhere
+┌──────────────┐         ┌────────────────────┐        ┌─────────────────┐
+│  components  │         │  /api/vintasend    │        │  vintasend-api  │
+│       +      │ ──────▶ │  proxy route       │ ─────▶ │        +        │
+│  dashboard   │ ◀────── │                    │ ◀───── │  your backend   │
+│    -core     │  JSON   │  session checked   │  JSON  │                 │
+└──────────────┘         │  API key added     │        └─────────────────┘
+                         └────────────────────┘
+                          the only place the key exists
 ```
 
-Calls to the API are made **from the dashboard's server only** (server
-components and server actions), so `VINTASEND_API_KEY` never reaches a browser.
+The API authenticates with a bearer key that is a **server-side secret**, so the
+browser never talks to the API directly. The client is pointed at
+`/api/vintasend`, a route in this app that checks the visitor's session and then
+re-signs the call with `VINTASEND_API_KEY`. The key never reaches a browser.
 
 ## Getting started
 
@@ -61,17 +76,42 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Path | Responsibility |
 | --- | --- |
-| `lib/api/types.ts` | The API's wire contract, mirroring `openapi.yaml` in the API repo. |
-| `lib/api/client.ts` | Server-only HTTP client: base URL, bearer key, error envelope. |
-| `lib/api/notifications.ts` | Typed wrappers for each endpoint. |
-| `lib/notifications/types.ts` | UI filter state, plus a single import point for contract types. |
-| `app/actions.ts` | Server actions the client components call. |
+| `app/providers.tsx` | The query cache and the VintaSend client, pointed at the proxy route. |
+| `app/api/vintasend/[...path]/route.ts` | Session-checked proxy that adds the API key. The only server-side code that sees it. |
 | `app/components/` | The notifications page: table, filters, detail panel, dialogs. |
+| `lib/auth/` | Pluggable authentication. The core takes no position on this. |
+| `proxy.ts` | Route protection, and the provider context the proxy route needs. |
+
+There is no `lib/api` and no `app/actions.ts`. The contract types, the endpoint
+calls, the URL filter state and the cache invalidation all come from
+`vintasend-dashboard-core`:
+
+```tsx
+const { notifications, filters, setFilters, page, setPage, setSort, hasNextPage } =
+  useFilteredNotifications({ router: useNextRouterAdapter() });
+```
 
 Notifications arrive with a `kind` discriminator (`user` or `one-off`), so
 components branch on that rather than sniffing for fields. Errors from the API
-carry a machine-readable `code`; the preview dialog, for example, distinguishes
-`PREVIEW_UNAVAILABLE` from a genuine failure.
+carry a machine-readable `code`; the preview dialog, for example, uses
+`getApiErrorCode(error) === 'PREVIEW_UNAVAILABLE'` to tell "this notification
+never recorded a commit" from a genuine failure.
+
+### Building your own UI on the core
+
+The point of the split is that the interesting half is reusable. To start from
+scratch with a different design system:
+
+1. `npm install vintasend-dashboard-core @tanstack/react-query`
+2. Copy `app/providers.tsx` and `app/api/vintasend/[...path]/route.ts`. The
+   proxy route is what keeps the API key server-side; keep that shape whatever
+   else you change.
+3. Build components against the hooks. `app/components/notifications-page-client.tsx`
+   is the worked example: it is UI and dialog state, and every piece of data in
+   it arrives from a hook.
+
+The package's own README documents the full hook surface, the capability
+negotiation and the router adapters.
 
 ## Authentication
 
@@ -127,14 +167,16 @@ previews) now belong to the API, not to this app.
 ## Development
 
 ```bash
-npm run dev        # dev server
-npm test           # jest
-npm run typecheck  # tsc --noEmit
-npm run lint       # eslint
-npm run build      # production build
+npm run dev            # dev server
+npm test               # jest
+npm run test:coverage  # jest with the coverage thresholds enforced
+npm run typecheck      # tsc --noEmit
+npm run lint           # eslint
+npm run build          # production build
 ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`app/page.tsx` is only a Suspense boundary; the page itself is
+`app/components/notifications-page-client.tsx`.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 

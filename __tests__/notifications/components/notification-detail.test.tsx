@@ -8,12 +8,54 @@ import { render, screen, waitFor, act, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationDetail } from '@/app/components/notification-detail';
 
-// Mock the fetchNotificationDetail server action
+/**
+ * The panel now reads through `useNotification` from vintasend-dashboard-core.
+ * Only that hook is replaced, with a stand-in that has the same observable
+ * behaviour — idle while the id is null, loading, then data or error — so these
+ * tests stay about what the panel renders rather than about TanStack Query.
+ * `mockFetchNotificationDetail` is what the stand-in resolves from, which keeps
+ * every case below written the way it was.
+ */
 const mockFetchNotificationDetail = jest.fn();
 
-jest.mock('@/app/actions', () => ({
-  fetchNotificationDetail: (...args: unknown[]) => mockFetchNotificationDetail(...args),
-}));
+jest.mock('vintasend-dashboard-core', () => {
+  const actual = jest.requireActual('vintasend-dashboard-core');
+  const react = jest.requireActual('react');
+
+  return {
+    ...actual,
+    useNotification: (id: string | null | undefined) => {
+      const [state, setState] = react.useState({
+        isLoading: Boolean(id),
+        isError: false,
+        data: undefined as unknown,
+        error: null as unknown,
+      });
+
+      const load = react.useCallback((notificationId: string) => {
+        setState({ isLoading: true, isError: false, data: undefined, error: null });
+
+        return Promise.resolve(mockFetchNotificationDetail(notificationId)).then(
+          (detail: unknown) =>
+            setState({ isLoading: false, isError: false, data: { data: detail }, error: null }),
+          (error: unknown) =>
+            setState({ isLoading: false, isError: true, data: undefined, error }),
+        );
+      }, []);
+
+      react.useEffect(() => {
+        if (!id) {
+          setState({ isLoading: false, isError: false, data: undefined, error: null });
+          return;
+        }
+
+        void load(id);
+      }, [id, load]);
+
+      return { ...state, refetch: () => (id ? load(id) : Promise.resolve()) };
+    },
+  };
+});
 
 /**
  * Mock notification detail data for testing.

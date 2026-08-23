@@ -2,7 +2,7 @@
 
 import { format } from 'date-fns';
 import { Copy, FileText } from 'lucide-react';
-import { useEffect, useState, useCallback, useTransition } from 'react';
+import { getApiErrorMessage, useNotification } from 'vintasend-dashboard-core';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -16,13 +16,21 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import type {
-  JsonValue,
   NotificationDetail,
   NotificationStatus,
   NotificationType,
-  OneOffNotificationDetail,
-} from '@/lib/notifications/types';
-import { fetchNotificationDetail } from '../actions';
+} from 'vintasend-dashboard-core';
+
+/** The detail variant addressed to a raw email or phone rather than a user. */
+type OneOffNotificationDetail = Extract<NotificationDetail, { kind: 'one-off' }>;
+
+/**
+ * The context payloads are `unknown` in the contract — the API stores whatever
+ * the notification was rendered with — and the dashboard only ever stringifies
+ * them. This is the shape the display code assumes; values arriving as
+ * `unknown` are narrowed to it at the call site.
+ */
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 /**
  * Maps notification status to badge variant colors.
@@ -139,7 +147,7 @@ function CodeBlock({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-sm font-medium text-muted-foreground">{title}</span>
-        {content && (
+        {Boolean(content) && (
           <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-6 px-2">
             <Copy className="h-3 w-3 mr-1" />
             Copy
@@ -223,45 +231,19 @@ interface NotificationDetailProps {
  * Fetches notification data via server action when opened.
  */
 export function NotificationDetail({ notificationId, onClose }: NotificationDetailProps) {
-  const [notification, setNotification] = useState<NotificationDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  // The query stays idle while the id is null, so a panel that has never been
+  // opened does not fetch, and closing it does not need a manual state reset.
+  const { data, isLoading, isError, error, refetch } = useNotification(notificationId);
 
+  const notification = (data?.data ?? null) as NotificationDetail | null;
   const isOpen = notificationId !== null;
-
-  const loadNotification = useCallback(
-    (id: string) => {
-      startTransition(async () => {
-        try {
-          setError(null);
-          const data = await fetchNotificationDetail(id);
-          setNotification(data);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Failed to load notification details');
-          setNotification(null);
-        }
-      });
-    },
-    [], // startTransition is stable and doesn't need to be a dependency
-  );
-
-  useEffect(() => {
-    if (notificationId) {
-      loadNotification(notificationId);
-    } else {
-      // Reset state when panel closes
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setNotification(null);
-      setError(null);
-    }
-  }, [notificationId, loadNotification]);
 
   const handleClose = () => {
     onClose();
   };
 
   const renderContent = () => {
-    if (isPending) {
+    if (isLoading) {
       return (
         <div className="space-y-4 p-4" data-testid="notification-detail-loading">
           <Skeleton className="h-6 w-3/4" />
@@ -280,11 +262,11 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
       );
     }
 
-    if (error) {
+    if (isError) {
       return (
         <div className="p-4 text-center" data-testid="notification-detail-error">
-          <p className="text-destructive mb-4">{error}</p>
-          <Button variant="outline" onClick={() => notificationId && loadNotification(notificationId)}>
+          <p className="text-destructive mb-4">{getApiErrorMessage(error)}</p>
+          <Button variant="outline" onClick={() => refetch()}>
             Retry
           </Button>
         </div>
@@ -399,20 +381,20 @@ export function NotificationDetail({ notificationId, onClose }: NotificationDeta
         {/* Context Data */}
         <CodeBlock
           title="Context Used"
-          content={notification.contextUsed}
+          content={notification.contextUsed as JsonValue}
           testId="context-used"
         />
 
         <CodeBlock
           title="Context Parameters"
-          content={notification.contextParameters}
+          content={notification.contextParameters as JsonValue}
           testId="context-parameters"
         />
 
-        {notification.extraParams && (
+        {Boolean(notification.extraParams) && (
           <CodeBlock
             title="Extra Parameters"
-            content={notification.extraParams}
+            content={notification.extraParams as JsonValue}
             testId="extra-params"
           />
         )}

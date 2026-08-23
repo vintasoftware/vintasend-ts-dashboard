@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { Notification } from '@/lib/notifications/types';
+import type { Notification } from 'vintasend-dashboard-core';
 import { createColumns, columns as defaultColumns } from './columns';
 
 

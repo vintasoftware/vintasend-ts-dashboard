@@ -6,8 +6,22 @@ import { assertValidAuthConfig } from "./lib/auth/validate-config";
 
 const PUBLIC_ROUTES = ["/sign-in", "/sign-out", "/auth"];
 
+/**
+ * The same-origin proxy to the VintaSend API.
+ *
+ * Requests under this prefix still pass through the middleware — that is what
+ * establishes the provider's request context, so the route handler can ask the
+ * strategy who is signed in — but they are never redirected. Answering a fetch
+ * with a 307 to an HTML sign-in page produces a parse error in the browser
+ * instead of something the UI can act on, so the route handler returns a JSON
+ * 401 of its own. See app/api/vintasend/[...path]/route.ts.
+ */
+const API_ROUTE_PREFIX = "/api/vintasend";
+
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const pathname = request.nextUrl.pathname;
+
+  const isApiRoute = pathname.startsWith(API_ROUTE_PREFIX);
 
   const isPublicRoute =
     PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) ||
@@ -17,7 +31,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // For Clerk, we need to use their middleware wrapper
   if (process.env.AUTH_PROVIDER === "clerk") {
     const isProtectedRoute = createRouteMatcher([
-      "/((?!sign-in|sign-out|api/auth|_next|public).*)",
+      "/((?!sign-in|sign-out|api/auth|api/vintasend|_next|public).*)",
     ]);
 
     const handler = clerkMiddleware(async (auth, req) => {
@@ -45,6 +59,12 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
       return authRes;
     }
 
+    // The proxy route authenticates itself, so that a signed-out fetch gets a
+    // JSON 401 rather than a redirect to a login page.
+    if (isApiRoute) {
+      return authRes;
+    }
+
     // Protected routes - require authentication
     const session = await auth0.getSession(request);
     if (!session) {
@@ -56,7 +76,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   }
 
   // Fallback for other providers
-  if (isPublicRoute) {
+  if (isPublicRoute || isApiRoute) {
     return NextResponse.next();
   }
 
@@ -86,11 +106,14 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     *
+     * API routes are deliberately included: the proxy route needs the
+     * provider's request context to be established before its handler runs,
+     * which for Clerk only happens inside clerkMiddleware.
      */
-    "/((?!api|_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

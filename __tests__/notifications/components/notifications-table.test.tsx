@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationsTable } from '@/app/components/notifications-table';
-import type { Notification } from '@/lib/notifications/types';
+import type { Notification } from 'vintasend-dashboard-core';
 
 /**
  * Mock notification data for testing.

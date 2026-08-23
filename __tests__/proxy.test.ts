@@ -241,14 +241,62 @@ describe('proxy — strategy fallback', () => {
 });
 
 describe('proxy config', () => {
-  it('matches app routes while excluding static and API paths', () => {
+  it('matches app routes while excluding static assets', () => {
     expect(config.matcher).toHaveLength(1);
     // Next anchors matcher patterns; an unanchored RegExp would match substrings.
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
     expect(matcher.test('/notifications')).toBe(true);
-    expect(matcher.test('/api/health')).toBe(false);
     expect(matcher.test('/_next/static/app.js')).toBe(false);
     expect(matcher.test('/favicon.ico')).toBe(false);
+  });
+
+  it('matches the VintaSend proxy route', () => {
+    const matcher = new RegExp(`^${config.matcher[0]}$`);
+
+    // The route handler asks the strategy who is signed in, and for Clerk that
+    // only works if clerkMiddleware has already run for the request. Excluding
+    // /api here would make every proxied call look anonymous.
+    expect(matcher.test('/api/vintasend/api/v1/notifications')).toBe(true);
+  });
+});
+
+describe('proxy — the VintaSend API route', () => {
+  const apiPath = '/api/vintasend/api/v1/notifications';
+
+  it('does not redirect an anonymous Clerk request, so the route can answer 401', async () => {
+    process.env.AUTH_PROVIDER = 'clerk';
+    createRouteMatcher.mockReturnValue((req: NextRequest) => {
+      // Mirrors the real negative lookahead, which exempts api/vintasend.
+      return !req.nextUrl.pathname.startsWith('/api/vintasend');
+    });
+    clerkHandler.mockImplementation(async (req: NextRequest) => {
+      const callback = clerkMiddleware.mock.calls[0][0];
+      return callback(async () => ({ userId: null }), req);
+    });
+
+    const result = (await proxy(makeRequest(apiPath), event)) as NextResponse;
+
+    expect(result.headers.get('location')).toBeNull();
+  });
+
+  it('does not redirect an anonymous Auth0 request', async () => {
+    process.env.AUTH_PROVIDER = 'auth0';
+    const authRes = NextResponse.next();
+    auth0Middleware.mockResolvedValue(authRes);
+    getSession.mockResolvedValue(null);
+
+    const result = await proxy(makeRequest(apiPath), event);
+
+    expect(result).toBe(authRes);
+  });
+
+  it('does not run the fallback strategy over the proxy route', async () => {
+    process.env.AUTH_PROVIDER = 'custom';
+
+    const result = (await proxy(makeRequest(apiPath), event)) as NextResponse;
+
+    expect(resolveAuthStrategy).not.toHaveBeenCalled();
+    expect(result.headers.get('location')).toBeNull();
   });
 });

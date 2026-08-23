@@ -16,7 +16,7 @@ jest.mock('sonner', () => ({
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { NotificationsTable } from '@/app/components/notifications-table';
-import type { Notification } from '@/lib/notifications/types';
+import type { Notification } from 'vintasend-dashboard-core';
 
 const userNotification = (overrides: Partial<Notification> = {}): Notification =>
   ({

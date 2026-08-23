@@ -20,7 +20,7 @@ import type {
   NotificationStatus,
   NotificationType,
   OneOffNotification,
-} from '@/lib/notifications/types';
+} from 'vintasend-dashboard-core';
 
 /**
  * Maps notification status to badge variant colors.

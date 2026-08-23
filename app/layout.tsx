@@ -5,6 +5,7 @@ import { resolveAuthStrategy } from "@/lib/auth";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { assertValidAuthConfig } from "@/lib/auth/validate-config";
 import { TopNavbar } from "./components/top-navbar";
+import { Providers } from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import type { AuthUser } from "@/lib/auth";
 
@@ -43,8 +44,12 @@ async function RootLayoutContent({
         signInUrl={signInUrl}
         signOutUrl={signOutUrl}
       >
-        <TopNavbar />
-        {children}
+        {/* Query cache and VintaSend client, inside the session so a signed-out
+            user never has a client pointed at the proxy. */}
+        <Providers>
+          <TopNavbar />
+          {children}
+        </Providers>
       </AuthProvider>
     </ProviderComponent>
   );

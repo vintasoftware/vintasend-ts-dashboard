@@ -1,7 +1,11 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
 import { Copy, FileText } from 'lucide-react';
+import {
+  getApiErrorCode,
+  getApiErrorMessage,
+  useNotificationPreview,
+} from 'vintasend-dashboard-core';
 
 import {
   AlertDialog,
@@ -13,10 +17,6 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  fetchNotificationPreview,
-  type NotificationPreviewResult,
-} from '../actions';
 
 interface PreviewRenderDialogProps {
   notificationId: string | null;
@@ -60,32 +60,19 @@ function RenderedHtmlBlock({
 }
 
 export function PreviewRenderDialog({ notificationId, onClose }: PreviewRenderDialogProps) {
-  const [previewResult, setPreviewResult] = useState<NotificationPreviewResult | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { data, isLoading, isError, error } = useNotificationPreview(notificationId);
 
+  const previewResult = data?.data ?? null;
   const isOpen = notificationId !== null;
 
-  useEffect(() => {
-    if (!notificationId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setPreviewResult(null);
-      return;
-    }
-
-    startTransition(async () => {
-      const result = await fetchNotificationPreview(notificationId);
-      setPreviewResult(result);
-    });
-  }, [notificationId]);
-
   const handleOpenChange = (open: boolean) => {
-    if (!open && !isPending) {
+    if (!open && !isLoading) {
       onClose();
     }
   };
 
   const renderContent = () => {
-    if (isPending) {
+    if (isLoading) {
       return (
         <div className="py-6 text-sm text-muted-foreground" data-testid="preview-render-loading">
           Loading template preview...
@@ -93,24 +80,27 @@ export function PreviewRenderDialog({ notificationId, onClose }: PreviewRenderDi
       );
     }
 
-    if (!previewResult) {
-      return null;
-    }
+    if (isError) {
+      // A notification with no recorded commit cannot have its templates
+      // resolved. That is an expected state for older rows rather than a
+      // failure, so it reads as an explanation instead of an error.
+      if (getApiErrorCode(error) === 'PREVIEW_UNAVAILABLE') {
+        return (
+          <div className="py-2" data-testid="preview-render-missing-sha">
+            <p className="text-sm text-muted-foreground">{getApiErrorMessage(error)}</p>
+          </div>
+        );
+      }
 
-    if (previewResult.state === 'missing_sha') {
-      return (
-        <div className="py-2" data-testid="preview-render-missing-sha">
-          <p className="text-sm text-muted-foreground">{previewResult.message}</p>
-        </div>
-      );
-    }
-
-    if (previewResult.state === 'error') {
       return (
         <div className="py-2" data-testid="preview-render-error">
-          <p className="text-sm text-destructive">{previewResult.message}</p>
+          <p className="text-sm text-destructive">{getApiErrorMessage(error)}</p>
         </div>
       );
+    }
+
+    if (!previewResult) {
+      return null;
     }
 
     return (
@@ -163,7 +153,7 @@ export function PreviewRenderDialog({ notificationId, onClose }: PreviewRenderDi
         <div className="max-h-[70vh] overflow-y-auto pr-1">{renderContent()}</div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>Close</AlertDialogCancel>
+          <AlertDialogCancel disabled={isLoading}>Close</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

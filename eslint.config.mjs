@@ -11,12 +11,13 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    "coverage/**",
     "next-env.d.ts",
   ]),
   {
     // This package is CommonJS (no "type": "module"), so its .js config files
     // legitimately use require().
-    files: ["*.config.js", "*.setup.js"],
+    files: ["*.config.js", "*.setup.js", "*.environment.js"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },

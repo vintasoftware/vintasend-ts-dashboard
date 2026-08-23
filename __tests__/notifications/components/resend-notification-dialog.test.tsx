@@ -7,12 +7,19 @@
  * reaches the server action is asserted explicitly.
  */
 
-const resendNotification = jest.fn();
+/**
+ * The dialog now writes through `useResendNotification` from
+ * vintasend-dashboard-core. Only that hook is replaced: `mutateAsync` stands in
+ * for the request, so the cases below still turn on what the dialog sends and
+ * what it does with the answer.
+ */
+const mutateAsync = jest.fn();
 const toastSuccess = jest.fn();
 const toastError = jest.fn();
 
-jest.mock('@/app/actions', () => ({
-  resendNotification: (...args: unknown[]) => resendNotification(...(args as [])),
+jest.mock('vintasend-dashboard-core', () => ({
+  ...jest.requireActual('vintasend-dashboard-core'),
+  useResendNotification: () => ({ mutateAsync, isPending: false }),
 }));
 
 jest.mock('sonner', () => ({
@@ -44,7 +51,7 @@ const confirm = () => screen.getByRole('button', { name: 'Resend Notification' }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  resendNotification.mockResolvedValue({ success: true, notification: { id: 'notif-2' } });
+  mutateAsync.mockResolvedValue({ data: { id: 'notif-2' } });
 });
 
 describe('ResendNotificationDialog visibility', () => {
@@ -81,7 +88,12 @@ describe('ResendNotificationDialog context choice', () => {
 
     await interaction.click(confirm());
 
-    await waitFor(() => expect(resendNotification).toHaveBeenCalledWith('notif-1', false));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        params: { path: { id: 'notif-1' } },
+        body: { useStoredContext: false },
+      }),
+    );
   });
 
   it('resends with the stored context once that option is picked', async () => {
@@ -91,7 +103,12 @@ describe('ResendNotificationDialog context choice', () => {
     await interaction.click(screen.getAllByRole('radio')[1]);
     await interaction.click(confirm());
 
-    await waitFor(() => expect(resendNotification).toHaveBeenCalledWith('notif-1', true));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        params: { path: { id: 'notif-1' } },
+        body: { useStoredContext: true },
+      }),
+    );
   });
 
   it('lets the user switch back to recalculating', async () => {
@@ -103,7 +120,12 @@ describe('ResendNotificationDialog context choice', () => {
     await interaction.click(recalculate);
     await interaction.click(confirm());
 
-    await waitFor(() => expect(resendNotification).toHaveBeenCalledWith('notif-1', false));
+    await waitFor(() =>
+      expect(mutateAsync).toHaveBeenCalledWith({
+        params: { path: { id: 'notif-1' } },
+        body: { useStoredContext: false },
+      }),
+    );
   });
 });
 
@@ -127,7 +149,9 @@ describe('ResendNotificationDialog outcomes', () => {
   });
 
   it('surfaces the failure without treating it as a resend', async () => {
-    resendNotification.mockResolvedValue({ success: false, error: 'notification already sent' });
+    mutateAsync.mockRejectedValue({
+      error: { code: 'CONFLICT', message: 'notification already sent' },
+    });
     const interaction = userEvent.setup();
     const { onResent } = renderDialog();
 
@@ -146,7 +170,9 @@ describe('ResendNotificationDialog outcomes', () => {
     // Documents current behaviour rather than endorsing it: AlertDialogAction
     // dismisses the dialog itself, so the failure branch's intent of leaving it
     // open for a retry does not hold. The error toast is still shown.
-    resendNotification.mockResolvedValue({ success: false, error: 'notification already sent' });
+    mutateAsync.mockRejectedValue({
+      error: { code: 'CONFLICT', message: 'notification already sent' },
+    });
     const interaction = userEvent.setup();
     const { onClose } = renderDialog();
 
@@ -173,13 +199,13 @@ describe('ResendNotificationDialog outcomes', () => {
     await interaction.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(resendNotification).not.toHaveBeenCalled();
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 
   it('does nothing when confirmed with no notification selected', async () => {
     // The dialog is closed in this state; the guard covers a stale click.
     renderDialog({ notificationId: null });
 
-    expect(resendNotification).not.toHaveBeenCalled();
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 });
